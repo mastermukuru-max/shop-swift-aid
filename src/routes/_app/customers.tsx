@@ -19,7 +19,7 @@ function CustomersPage() {
   const [editing, setEditing] = useState<Partial<Customer> | null>(null);
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
-  useEffect(load, []);
+  useEffect(() => { load(); }, []);
 
   const save = async () => {
     if (!editing?.name) { toast.error("Name required"); return; }
