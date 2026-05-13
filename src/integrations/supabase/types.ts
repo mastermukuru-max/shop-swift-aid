@@ -77,6 +77,7 @@ export type Database = {
       products: {
         Row: {
           barcode: string | null
+          bulk_unit: string | null
           category_id: string | null
           cost_price: number
           created_at: string
@@ -90,11 +91,13 @@ export type Database = {
           sku: string
           stock_quantity: number
           unit: string
+          units_per_bulk: number
           updated_at: string
           wholesale_price: number
         }
         Insert: {
           barcode?: string | null
+          bulk_unit?: string | null
           category_id?: string | null
           cost_price?: number
           created_at?: string
@@ -108,11 +111,13 @@ export type Database = {
           sku: string
           stock_quantity?: number
           unit?: string
+          units_per_bulk?: number
           updated_at?: string
           wholesale_price?: number
         }
         Update: {
           barcode?: string | null
+          bulk_unit?: string | null
           category_id?: string | null
           cost_price?: number
           created_at?: string
@@ -126,6 +131,7 @@ export type Database = {
           sku?: string
           stock_quantity?: number
           unit?: string
+          units_per_bulk?: number
           updated_at?: string
           wholesale_price?: number
         }
