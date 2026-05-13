@@ -3,7 +3,8 @@ import { LayoutDashboard, ShoppingCart, Package, Users, Truck, Receipt, UserCog,
 import { useAuth } from "@/hooks/useAuth";
 import { Toaster } from "sonner";
 
-const NAV = [
+type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; adminOnly?: boolean };
+const NAV: NavItem[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { to: "/pos", label: "POS Terminal", icon: ShoppingCart },
   { to: "/products", label: "Inventory", icon: Package },
@@ -11,7 +12,7 @@ const NAV = [
   { to: "/customers", label: "Customers", icon: Users },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/users", label: "Staff", icon: UserCog, adminOnly: true },
-] as const;
+];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, roles, isAdmin, signOut } = useAuth();
