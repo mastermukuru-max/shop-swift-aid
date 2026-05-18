@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { fmtKES } from "@/lib/format";
-import { Search, Trash2, Plus, Minus, X } from "lucide-react";
+import { Search, Trash2, Plus, Minus, X, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { printThermalReceipt } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_app/pos")({
   component: POS,
@@ -29,7 +30,8 @@ function POS() {
   const [discount, setDiscount] = useState(0);
   const [vatPct, setVatPct] = useState(16);
   const [paying, setPaying] = useState<null | "cash" | "mpesa">(null);
-  const [amountPaid, setAmountPaid] = useState("");
+  const [mpesaRef, setMpesaRef] = useState("");
+  const [autoPrint, setAutoPrint] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = () => {
@@ -70,9 +72,10 @@ function POS() {
   const tax = Math.max(0, (subtotal - discount) * (vatPct / 100));
   const total = Math.max(0, subtotal - discount + tax);
 
-  const completeSale = async (method: "cash" | "mpesa") => {
+  const completeSale = async (method: "cash" | "mpesa", reference?: string) => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
     if (!user) { toast.error("Not signed in"); return; }
+    if (method === "mpesa" && !reference?.trim()) { toast.error("Enter M-Pesa SMS code"); return; }
     setBusy(true);
     try {
       const saleNumber = `S-${Date.now().toString().slice(-8)}`;
@@ -85,6 +88,7 @@ function POS() {
         payment_method: method,
         status: "completed",
         is_wholesale: isWholesale,
+        mpesa_reference: method === "mpesa" ? reference!.trim().toUpperCase() : null,
       }).select().single();
       if (saleErr) throw saleErr;
 
@@ -95,8 +99,18 @@ function POS() {
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      const cust = customers.find(c => c.id === customerId)?.name;
+      const receipt = {
+        saleNumber, createdAt: sale.created_at ?? new Date().toISOString(),
+        cashier: user.email ?? undefined, customer: cust, isWholesale,
+        paymentMethod: method, mpesaReference: reference?.trim().toUpperCase(),
+        items: cart.map(x => ({ name: x.product.name, qty: x.qty, price: x.price })),
+        subtotal, discount, tax, total,
+      };
+      if (autoPrint) printThermalReceipt(receipt);
+
       toast.success(`Sale ${saleNumber} completed — ${fmtKES(total)}`);
-      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setAmountPaid("");
+      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setMpesaRef("");
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Sale failed");
@@ -213,20 +227,58 @@ function POS() {
             <span className="text-2xl font-display font-extrabold text-primary">{fmtKES(total)}</span>
           </div>
 
+          <label className="flex items-center gap-2 text-[10px] font-mono text-white/60 uppercase tracking-widest cursor-pointer pt-1">
+            <input type="checkbox" checked={autoPrint} onChange={e => setAutoPrint(e.target.checked)} />
+            <Printer className="size-3" /> Auto-print receipt
+          </label>
+
           <div className="grid grid-cols-2 gap-2 mt-3">
-            <button disabled={busy || cart.length === 0} onClick={() => completeSale("mpesa")}
+            <button disabled={busy || cart.length === 0} onClick={() => setPaying("mpesa")}
               className="bg-primary hover:bg-primary/90 disabled:opacity-40 text-primary-foreground py-3 font-display font-extrabold text-sm flex flex-col items-center">
               <span>M-PESA</span>
-              <span className="text-[9px] font-mono font-normal opacity-80">RECORD PAYMENT</span>
+              <span className="text-[9px] font-mono font-normal opacity-80">ENTER SMS CODE</span>
             </button>
             <button disabled={busy || cart.length === 0} onClick={() => completeSale("cash")}
               className="bg-white text-foreground hover:bg-white/90 disabled:opacity-40 py-3 font-display font-extrabold text-sm flex flex-col items-center">
               <span>CASH</span>
-              <span className="text-[9px] font-mono font-normal opacity-70">F10 SHORTCUT</span>
+              <span className="text-[9px] font-mono font-normal opacity-70">PRINT RECEIPT</span>
             </button>
           </div>
         </div>
       </div>
+
+      {paying === "mpesa" && (
+        <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4" onClick={() => !busy && setPaying(null)}>
+          <div onClick={e => e.stopPropagation()} className="bg-card border border-border w-full max-w-md p-6 space-y-4">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="font-display font-extrabold text-xl">CONFIRM M-PESA</h3>
+                <p className="text-xs font-mono text-muted-foreground mt-1">Enter the SMS confirmation code from the customer.</p>
+              </div>
+              <button onClick={() => !busy && setPaying(null)} className="p-1 hover:bg-muted"><X className="size-4" /></button>
+            </div>
+            <div className="bg-secondary p-4 flex items-baseline justify-between">
+              <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Amount</span>
+              <span className="text-2xl font-display font-extrabold text-primary">{fmtKES(total)}</span>
+            </div>
+            <label className="block">
+              <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">M-Pesa SMS Code</div>
+              <input autoFocus value={mpesaRef} onChange={e => setMpesaRef(e.target.value.toUpperCase())}
+                placeholder="e.g. SGH7K2M4LP"
+                className="w-full bg-secondary border border-border px-3 py-3 font-mono uppercase tracking-widest outline-none focus:ring-2 focus:ring-primary" />
+              <p className="text-[10px] font-mono text-muted-foreground mt-1">10-character reference from the Safaricom SMS.</p>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button disabled={busy} onClick={() => setPaying(null)}
+                className="border border-border py-3 font-display font-extrabold text-sm hover:bg-muted">CANCEL</button>
+              <button disabled={busy || !mpesaRef.trim()} onClick={() => completeSale("mpesa", mpesaRef)}
+                className="bg-primary text-primary-foreground py-3 font-display font-extrabold text-sm disabled:opacity-40 hover:bg-primary/90">
+                {busy ? "PROCESSING…" : "CONFIRM & PRINT"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
