@@ -28,7 +28,6 @@ function POS() {
   const [customerId, setCustomerId] = useState<string>("");
   const [isWholesale, setIsWholesale] = useState(false);
   const [discount, setDiscount] = useState(0);
-  const [vatPct, setVatPct] = useState(16);
   const [paying, setPaying] = useState<null | "cash" | "mpesa">(null);
   const [mpesaRef, setMpesaRef] = useState("");
   const [autoPrint, setAutoPrint] = useState(true);
@@ -69,8 +68,8 @@ function POS() {
   };
 
   const subtotal = cart.reduce((s, x) => s + x.qty * x.price, 0);
-  const tax = Math.max(0, (subtotal - discount) * (vatPct / 100));
-  const total = Math.max(0, subtotal - discount + tax);
+  const tax = 0;
+  const total = Math.max(0, subtotal - discount);
 
   const completeSale = async (method: "cash" | "mpesa", reference?: string) => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
@@ -217,11 +216,8 @@ function POS() {
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Discount</label>
             <input type="number" value={discount} onChange={e => setDiscount(Math.max(0, Number(e.target.value)))} className="flex-1 bg-white/10 px-2 py-1 text-xs font-mono outline-none" />
-            <label className="text-[10px] font-mono text-white/50 uppercase tracking-widest">VAT%</label>
-            <input type="number" value={vatPct} onChange={e => setVatPct(Math.max(0, Number(e.target.value)))} className="w-14 bg-white/10 px-2 py-1 text-xs font-mono outline-none" />
           </div>
           <div className="flex justify-between text-white/60 font-mono text-xs"><span>SUBTOTAL</span><span>{fmtKES(subtotal)}</span></div>
-          <div className="flex justify-between text-white/60 font-mono text-xs"><span>VAT</span><span>{fmtKES(tax)}</span></div>
           <div className="flex justify-between items-end pt-3 border-t border-white/10">
             <span className="font-display font-extrabold">TOTAL</span>
             <span className="text-2xl font-display font-extrabold text-primary">{fmtKES(total)}</span>

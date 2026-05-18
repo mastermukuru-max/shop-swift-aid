@@ -47,7 +47,6 @@ export function printThermalReceipt(r: ReceiptData) {
   rows.push(line());
   rows.push(lr("Subtotal", fmtKES(r.subtotal)));
   if (r.discount) rows.push(lr("Discount", `-${fmtKES(r.discount)}`));
-  rows.push(lr("VAT", fmtKES(r.tax)));
   rows.push(lr("TOTAL", fmtKES(r.total)));
   rows.push(line());
   rows.push(lr("Paid", r.paymentMethod.toUpperCase()));
