@@ -30,7 +30,8 @@ function POS() {
   const [discount, setDiscount] = useState(0);
   const [vatPct, setVatPct] = useState(16);
   const [paying, setPaying] = useState<null | "cash" | "mpesa">(null);
-  const [amountPaid, setAmountPaid] = useState("");
+  const [mpesaRef, setMpesaRef] = useState("");
+  const [autoPrint, setAutoPrint] = useState(true);
   const [busy, setBusy] = useState(false);
 
   const load = () => {
