@@ -3,8 +3,9 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { fmtKES } from "@/lib/format";
-import { Search, Trash2, Plus, Minus, X } from "lucide-react";
+import { Search, Trash2, Plus, Minus, X, Printer } from "lucide-react";
 import { toast } from "sonner";
+import { printThermalReceipt } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_app/pos")({
   component: POS,
