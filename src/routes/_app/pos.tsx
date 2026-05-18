@@ -28,7 +28,6 @@ function POS() {
   const [customerId, setCustomerId] = useState<string>("");
   const [isWholesale, setIsWholesale] = useState(false);
   const [discount, setDiscount] = useState(0);
-  const [vatPct, setVatPct] = useState(16);
   const [paying, setPaying] = useState<null | "cash" | "mpesa">(null);
   const [mpesaRef, setMpesaRef] = useState("");
   const [autoPrint, setAutoPrint] = useState(true);
