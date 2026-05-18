@@ -68,8 +68,8 @@ function POS() {
   };
 
   const subtotal = cart.reduce((s, x) => s + x.qty * x.price, 0);
-  const tax = Math.max(0, (subtotal - discount) * (vatPct / 100));
-  const total = Math.max(0, subtotal - discount + tax);
+  const tax = 0;
+  const total = Math.max(0, subtotal - discount);
 
   const completeSale = async (method: "cash" | "mpesa", reference?: string) => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
