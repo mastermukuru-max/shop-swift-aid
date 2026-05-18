@@ -229,6 +229,7 @@ export type Database = {
           discount: number
           id: string
           is_wholesale: boolean
+          mpesa_reference: string | null
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
           sale_number: string
@@ -245,6 +246,7 @@ export type Database = {
           discount?: number
           id?: string
           is_wholesale?: boolean
+          mpesa_reference?: string | null
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           sale_number: string
@@ -261,6 +263,7 @@ export type Database = {
           discount?: number
           id?: string
           is_wholesale?: boolean
+          mpesa_reference?: string | null
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
           sale_number?: string
