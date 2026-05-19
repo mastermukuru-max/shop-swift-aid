@@ -47,34 +47,11 @@ function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen grid lg:grid-cols-2 bg-background">
+    <div className="min-h-screen flex items-center justify-center bg-background p-6">
       <Toaster position="top-right" richColors />
-      {/* Brand panel */}
-      <div className="hidden lg:flex flex-col justify-between bg-surface text-surface-foreground p-12">
-        <div>
-          <div className="bg-primary text-primary-foreground font-display font-extrabold text-2xl px-4 py-1.5 inline-block">
-            BEI POA
-          </div>
-          <div className="text-xs font-mono text-white/40 mt-3 tracking-widest">RETAIL · WHOLESALE · MPESA</div>
-        </div>
-        <div>
-          <h2 className="text-4xl font-display font-extrabold tracking-tight leading-tight">
-            Run your shop.<br />
-            <span className="text-primary">Track every shilling.</span>
-          </h2>
-          <p className="text-white/60 mt-4 max-w-md text-sm leading-relaxed">
-            Point of sale, inventory, wholesale credit and Mpesa reconciliation — built for Kenyan retailers.
-          </p>
-        </div>
-        <div className="text-[10px] font-mono text-white/30 tracking-widest">
-          BEI POA · ALL PRICES IN KES
-        </div>
-      </div>
-
-      {/* Auth form */}
-      <div className="flex items-center justify-center p-6 lg:p-12">
+      <div className="flex items-center justify-center w-full">
         <div className="w-full max-w-sm">
-          <div className="lg:hidden bg-primary text-primary-foreground font-display font-extrabold text-xl px-3 py-1 inline-block mb-6">
+          <div className="bg-primary text-primary-foreground font-display font-extrabold text-xl px-3 py-1 inline-block mb-6">
             BEI POA
           </div>
           <h1 className="text-2xl font-display font-extrabold tracking-tight">
