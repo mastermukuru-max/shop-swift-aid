@@ -37,7 +37,7 @@ function ProductsPage() {
   const save = async () => {
     if (!editing) return;
     const payload: any = {
-      sku: editing.sku || `SKU-${Date.now().toString().slice(-6)}`,
+      sku: editing.sku?.trim() || undefined,
       barcode: editing.barcode || null,
       name: editing.name, category_id: editing.category_id || null,
       unit: editing.unit || "pcs",
