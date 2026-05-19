@@ -37,7 +37,7 @@ function ProductsPage() {
   const save = async () => {
     if (!editing) return;
     const payload: any = {
-      sku: editing.sku || `SKU-${Date.now().toString().slice(-6)}`,
+      sku: editing.sku?.trim() || undefined,
       barcode: editing.barcode || null,
       name: editing.name, category_id: editing.category_id || null,
       unit: editing.unit || "pcs",
@@ -143,7 +143,7 @@ function ProductsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label="Name" full><input value={editing.name ?? ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className={inputCls} /></Field>
-              <Field label="SKU"><input value={editing.sku ?? ""} onChange={e => setEditing({ ...editing, sku: e.target.value })} placeholder="auto" className={inputCls} /></Field>
+              <Field label="Serial #"><input value={editing.sku ?? ""} onChange={e => setEditing({ ...editing, sku: e.target.value })} placeholder="auto (e.g. 001)" className={inputCls} /></Field>
               <Field label="Barcode"><input value={editing.barcode ?? ""} onChange={e => setEditing({ ...editing, barcode: e.target.value })} className={inputCls} /></Field>
               <Field label="Category">
                 <select value={editing.category_id ?? ""} onChange={e => setEditing({ ...editing, category_id: e.target.value })} className={inputCls}>
