@@ -15,6 +15,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppUsersRouteImport } from './routes/_app/users'
 import { Route as AppSuppliersRouteImport } from './routes/_app/suppliers'
 import { Route as AppSalesRouteImport } from './routes/_app/sales'
+import { Route as AppProfitRouteImport } from './routes/_app/profit'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
 import { Route as AppPosRouteImport } from './routes/_app/pos'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -49,6 +50,11 @@ const AppSalesRoute = AppSalesRouteImport.update({
   path: '/sales',
   getParentRoute: () => AppRoute,
 } as any)
+const AppProfitRoute = AppProfitRouteImport.update({
+  id: '/profit',
+  path: '/profit',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppProductsRoute = AppProductsRouteImport.update({
   id: '/products',
   path: '/products',
@@ -77,6 +83,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/pos': typeof AppPosRoute
   '/products': typeof AppProductsRoute
+  '/profit': typeof AppProfitRoute
   '/sales': typeof AppSalesRoute
   '/suppliers': typeof AppSuppliersRoute
   '/users': typeof AppUsersRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/pos': typeof AppPosRoute
   '/products': typeof AppProductsRoute
+  '/profit': typeof AppProfitRoute
   '/sales': typeof AppSalesRoute
   '/suppliers': typeof AppSuppliersRoute
   '/users': typeof AppUsersRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/pos': typeof AppPosRoute
   '/_app/products': typeof AppProductsRoute
+  '/_app/profit': typeof AppProfitRoute
   '/_app/sales': typeof AppSalesRoute
   '/_app/suppliers': typeof AppSuppliersRoute
   '/_app/users': typeof AppUsersRoute
@@ -114,6 +123,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/pos'
     | '/products'
+    | '/profit'
     | '/sales'
     | '/suppliers'
     | '/users'
@@ -125,6 +135,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/pos'
     | '/products'
+    | '/profit'
     | '/sales'
     | '/suppliers'
     | '/users'
@@ -137,6 +148,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/pos'
     | '/_app/products'
+    | '/_app/profit'
     | '/_app/sales'
     | '/_app/suppliers'
     | '/_app/users'
@@ -192,6 +204,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSalesRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/profit': {
+      id: '/_app/profit'
+      path: '/profit'
+      fullPath: '/profit'
+      preLoaderRoute: typeof AppProfitRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/products': {
       id: '/_app/products'
       path: '/products'
@@ -228,6 +247,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppPosRoute: typeof AppPosRoute
   AppProductsRoute: typeof AppProductsRoute
+  AppProfitRoute: typeof AppProfitRoute
   AppSalesRoute: typeof AppSalesRoute
   AppSuppliersRoute: typeof AppSuppliersRoute
   AppUsersRoute: typeof AppUsersRoute
@@ -238,6 +258,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppPosRoute: AppPosRoute,
   AppProductsRoute: AppProductsRoute,
+  AppProfitRoute: AppProfitRoute,
   AppSalesRoute: AppSalesRoute,
   AppSuppliersRoute: AppSuppliersRoute,
   AppUsersRoute: AppUsersRoute,
@@ -253,3 +274,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
