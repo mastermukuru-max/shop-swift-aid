@@ -21,7 +21,7 @@ export const createStaffUser = createServerFn({ method: "POST" })
     await supabaseAdmin.from("user_roles").delete().eq("user_id", authData.user.id);
     const { error: roleError } = await supabaseAdmin.from("user_roles").insert({
       user_id: authData.user.id,
-      role: data.role,
+      role: data.role as any,
     });
     if (roleError) throw new Error(roleError.message);
 
