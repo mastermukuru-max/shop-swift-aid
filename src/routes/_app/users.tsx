@@ -5,6 +5,8 @@ import { useAuth, type AppRole } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/AppShell";
 import { fmtDate } from "@/lib/format";
 import { toast } from "sonner";
+import { createStaffUser } from "@/lib/users.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_app/users")({
   component: UsersPage,
@@ -16,6 +18,10 @@ const ROLES: AppRole[] = ["super_admin", "business_owner", "cashier", "accountan
 function UsersPage() {
   const { isAdmin, user: me } = useAuth();
   const [rows, setRows] = useState<any[]>([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ fullName: "", email: "", password: "", role: "cashier" as AppRole });
+  const [busy, setBusy] = useState(false);
+  const createUser = useServerFn(createStaffUser);
 
   const load = async () => {
     const [{ data: profiles }, { data: roles }] = await Promise.all([
@@ -40,6 +46,23 @@ function UsersPage() {
     toast.success("Role updated"); load();
   };
 
+  const handleCreate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAdmin) return;
+    setBusy(true);
+    try {
+      await createUser({ data: { ...form, role: form.role } });
+      toast.success("Staff account created");
+      setForm({ fullName: "", email: "", password: "", role: "cashier" });
+      setShowForm(false);
+      load();
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to create account");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (!isAdmin) {
     return (
       <div className="animate-in">
@@ -52,7 +75,66 @@ function UsersPage() {
   return (
     <div className="animate-in">
       <PageHeader title="Staff & Roles" subtitle={`${rows.length} users`} />
-      <div className="p-8">
+      <div className="p-8 space-y-6">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowForm(s => !s)}
+            className="bg-primary text-primary-foreground font-display font-extrabold text-xs uppercase tracking-widest px-4 py-2 hover:bg-primary/90"
+          >
+            {showForm ? "Cancel" : "+ New Staff"}
+          </button>
+        </div>
+
+        {showForm && (
+          <form onSubmit={handleCreate} className="border border-border bg-card p-4 space-y-4 max-w-lg">
+            <h3 className="text-sm font-bold uppercase tracking-widest">Create Staff Account</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Full Name</label>
+                <input
+                  type="text" required value={form.fullName}
+                  onChange={e => setForm(f => ({ ...f, fullName: e.target.value }))}
+                  className="mt-1 w-full bg-secondary border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Email</label>
+                <input
+                  type="email" required value={form.email}
+                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  className="mt-1 w-full bg-secondary border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Password</label>
+                <input
+                  type="text" required minLength={6} value={form.password}
+                  onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
+                  className="mt-1 w-full bg-secondary border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Role</label>
+                <select
+                  value={form.role}
+                  onChange={e => setForm(f => ({ ...f, role: e.target.value as AppRole }))}
+                  className="mt-1 w-full bg-secondary border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+                >
+                  {ROLES.map(r => (
+                    <option key={r} value={r}>{r.replace("_", " ")}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <button
+              type="submit" disabled={busy}
+              className="bg-primary text-primary-foreground font-display font-extrabold text-xs uppercase tracking-widest px-4 py-2 hover:bg-primary/90 disabled:opacity-60"
+            >
+              {busy ? "Creating…" : "Create Account"}
+            </button>
+          </form>
+        )}
+
         <div className="border border-border bg-card overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-muted text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
@@ -82,8 +164,8 @@ function UsersPage() {
             </tbody>
           </table>
         </div>
-        <p className="text-xs text-muted-foreground mt-4">
-          New signups become a <span className="font-bold">Cashier</span> by default. The first signup is auto-assigned <span className="font-bold">Super Admin</span>.
+        <p className="text-xs text-muted-foreground">
+          Use the checkboxes to assign or remove roles. Click <span className="font-bold">+ New Staff</span> to create accounts — signup is disabled on the login page.
         </p>
       </div>
     </div>
