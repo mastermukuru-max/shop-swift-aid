@@ -44,7 +44,7 @@ function LoginPage() {
           </div>
           <h1 className="text-2xl font-display font-extrabold tracking-tight">Sign in</h1>
           <p className="text-sm text-muted-foreground mt-1 mb-6">
-            Welcome back, cashier.
+            Welcome back.
           </p>
 
           <form onSubmit={submit} className="space-y-4">
