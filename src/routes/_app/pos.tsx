@@ -28,8 +28,9 @@ function POS() {
   const [customerId, setCustomerId] = useState<string>("");
   const [isWholesale, setIsWholesale] = useState(false);
   const [discount, setDiscount] = useState(0);
-  const [paying, setPaying] = useState<null | "cash" | "mpesa">(null);
+  const [paying, setPaying] = useState<null | "cash" | "mpesa" | "credit">(null);
   const [mpesaRef, setMpesaRef] = useState("");
+  const [deposit, setDeposit] = useState(0);
   const [autoPrint, setAutoPrint] = useState(true);
   const [busy, setBusy] = useState(false);
 
@@ -71,10 +72,17 @@ function POS() {
   const tax = 0;
   const total = Math.max(0, subtotal - discount);
 
-  const completeSale = async (method: "cash" | "mpesa", reference?: string) => {
+  const completeSale = async (method: "cash" | "mpesa" | "credit", opts?: { reference?: string; deposit?: number }) => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
     if (!user) { toast.error("Not signed in"); return; }
-    if (method === "mpesa" && !reference?.trim()) { toast.error("Enter M-Pesa SMS code"); return; }
+    if (method === "mpesa" && !opts?.reference?.trim()) { toast.error("Enter M-Pesa SMS code"); return; }
+    if (method === "credit") {
+      if (!customerId) { toast.error("Select a customer for credit sale"); return; }
+      const cust = customers.find(c => c.id === customerId);
+      if (!cust || cust.type !== "wholesale") { toast.error("Credit sales require a wholesale customer"); return; }
+    }
+    const depositAmt = method === "credit" ? Math.min(Math.max(0, opts?.deposit ?? 0), total) : total;
+    const balanceOwed = method === "credit" ? Math.max(0, total - depositAmt) : 0;
     setBusy(true);
     try {
       const saleNumber = `S-${Date.now().toString().slice(-8)}`;
@@ -83,11 +91,12 @@ function POS() {
         customer_id: customerId || null,
         cashier_id: user.id,
         subtotal, tax, discount, total,
-        amount_paid: total,
+        amount_paid: depositAmt,
         payment_method: method,
-        status: "completed",
+        status: method === "credit" && balanceOwed > 0 ? "pending" : "completed",
         is_wholesale: isWholesale,
-        mpesa_reference: method === "mpesa" ? reference!.trim().toUpperCase() : null,
+        mpesa_reference: method === "mpesa" ? opts!.reference!.trim().toUpperCase() : null,
+        notes: method === "credit" ? `Credit sale. Deposit: ${depositAmt}. Balance: ${balanceOwed}` : null,
       }).select().single();
       if (saleErr) throw saleErr;
 
@@ -98,18 +107,32 @@ function POS() {
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      if (method === "credit" && balanceOwed > 0) {
+        const cust = customers.find(c => c.id === customerId);
+        const { data: cur } = await supabase.from("customers").select("balance").eq("id", customerId).single();
+        const newBal = Number(cur?.balance ?? 0) + balanceOwed;
+        const { error: balErr } = await supabase.from("customers").update({ balance: newBal }).eq("id", customerId);
+        if (balErr) throw balErr;
+        void cust;
+      }
+
       const cust = customers.find(c => c.id === customerId)?.name;
       const receipt = {
         saleNumber, createdAt: sale.created_at ?? new Date().toISOString(),
         cashier: user.email ?? undefined, customer: cust, isWholesale,
-        paymentMethod: method, mpesaReference: reference?.trim().toUpperCase(),
+        paymentMethod: method === "credit" ? "cash" as const : method,
+        mpesaReference: opts?.reference?.trim().toUpperCase(),
         items: cart.map(x => ({ name: x.product.name, qty: x.qty, price: x.price })),
         subtotal, discount, tax, total,
       };
       if (autoPrint) printThermalReceipt(receipt);
 
-      toast.success(`Sale ${saleNumber} completed — ${fmtKES(total)}`);
-      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setMpesaRef("");
+      if (method === "credit") {
+        toast.success(`Credit sale ${saleNumber} — deposit ${fmtKES(depositAmt)}, balance ${fmtKES(balanceOwed)}`);
+      } else {
+        toast.success(`Sale ${saleNumber} completed — ${fmtKES(total)}`);
+      }
+      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setMpesaRef(""); setDeposit(0);
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Sale failed");
@@ -240,6 +263,11 @@ function POS() {
               <span className="text-[9px] font-mono font-normal opacity-70">PRINT RECEIPT</span>
             </button>
           </div>
+          <button disabled={busy || cart.length === 0} onClick={() => { setDeposit(0); setPaying("credit"); }}
+            className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-40 text-black py-3 font-display font-extrabold text-sm flex flex-col items-center mt-2">
+            <span>CREDIT · WHOLESALE DEBT</span>
+            <span className="text-[9px] font-mono font-normal opacity-70">SAVE UNPAID BALANCE TO CUSTOMER</span>
+          </button>
         </div>
       </div>
 
@@ -267,7 +295,7 @@ function POS() {
             <div className="grid grid-cols-2 gap-2">
               <button disabled={busy} onClick={() => setPaying(null)}
                 className="border border-border py-3 font-display font-extrabold text-sm hover:bg-muted">CANCEL</button>
-              <button disabled={busy || !mpesaRef.trim()} onClick={() => completeSale("mpesa", mpesaRef)}
+              <button disabled={busy || !mpesaRef.trim()} onClick={() => completeSale("mpesa", { reference: mpesaRef })}
                 className="bg-primary text-primary-foreground py-3 font-display font-extrabold text-sm disabled:opacity-40 hover:bg-primary/90">
                 {busy ? "PROCESSING…" : "CONFIRM & PRINT"}
               </button>
@@ -275,6 +303,67 @@ function POS() {
           </div>
         </div>
       )}
+
+      {paying === "credit" && (() => {
+        const cust = customers.find(c => c.id === customerId);
+        const isWholesaleCust = cust?.type === "wholesale";
+        const dep = Math.min(Math.max(0, deposit), total);
+        const balance = Math.max(0, total - dep);
+        return (
+          <div className="fixed inset-0 bg-black/70 z-50 grid place-items-center p-4" onClick={() => !busy && setPaying(null)}>
+            <div onClick={e => e.stopPropagation()} className="bg-card border border-border w-full max-w-md p-6 space-y-4">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="font-display font-extrabold text-xl">CREDIT SALE</h3>
+                  <p className="text-xs font-mono text-muted-foreground mt-1">Unpaid balance is added to the customer's account.</p>
+                </div>
+                <button onClick={() => !busy && setPaying(null)} className="p-1 hover:bg-muted"><X className="size-4" /></button>
+              </div>
+
+              <div>
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Wholesale Customer</div>
+                <select value={customerId} onChange={e => setCustomerId(e.target.value)}
+                  className="w-full bg-secondary border border-border px-3 py-3 outline-none">
+                  <option value="">Select customer…</option>
+                  {customers.filter(c => c.type === "wholesale").map(c => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+                {!isWholesaleCust && customerId && (
+                  <p className="text-[10px] font-mono text-destructive mt-1">Selected customer is not wholesale.</p>
+                )}
+              </div>
+
+              <div className="bg-secondary p-4 flex items-baseline justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Total</span>
+                <span className="text-2xl font-display font-extrabold text-primary">{fmtKES(total)}</span>
+              </div>
+
+              <label className="block">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Deposit (optional)</div>
+                <input type="number" autoFocus value={deposit}
+                  onChange={e => setDeposit(Math.max(0, Number(e.target.value)))}
+                  placeholder="0"
+                  className="w-full bg-secondary border border-border px-3 py-3 font-mono outline-none focus:ring-2 focus:ring-primary" />
+              </label>
+
+              <div className="bg-amber-500/10 border border-amber-500/30 p-4 flex items-baseline justify-between">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-amber-600">Balance owed</span>
+                <span className="text-2xl font-display font-extrabold text-amber-600">{fmtKES(balance)}</span>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2">
+                <button disabled={busy} onClick={() => setPaying(null)}
+                  className="border border-border py-3 font-display font-extrabold text-sm hover:bg-muted">CANCEL</button>
+                <button disabled={busy || !isWholesaleCust} onClick={() => completeSale("credit", { deposit: dep })}
+                  className="bg-amber-500 text-black py-3 font-display font-extrabold text-sm disabled:opacity-40 hover:bg-amber-400">
+                  {busy ? "SAVING…" : "SAVE CREDIT SALE"}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
