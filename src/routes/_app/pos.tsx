@@ -72,10 +72,17 @@ function POS() {
   const tax = 0;
   const total = Math.max(0, subtotal - discount);
 
-  const completeSale = async (method: "cash" | "mpesa", reference?: string) => {
+  const completeSale = async (method: "cash" | "mpesa" | "credit", opts?: { reference?: string; deposit?: number }) => {
     if (cart.length === 0) { toast.error("Cart is empty"); return; }
     if (!user) { toast.error("Not signed in"); return; }
-    if (method === "mpesa" && !reference?.trim()) { toast.error("Enter M-Pesa SMS code"); return; }
+    if (method === "mpesa" && !opts?.reference?.trim()) { toast.error("Enter M-Pesa SMS code"); return; }
+    if (method === "credit") {
+      if (!customerId) { toast.error("Select a customer for credit sale"); return; }
+      const cust = customers.find(c => c.id === customerId);
+      if (!cust || cust.type !== "wholesale") { toast.error("Credit sales require a wholesale customer"); return; }
+    }
+    const depositAmt = method === "credit" ? Math.min(Math.max(0, opts?.deposit ?? 0), total) : total;
+    const balanceOwed = method === "credit" ? Math.max(0, total - depositAmt) : 0;
     setBusy(true);
     try {
       const saleNumber = `S-${Date.now().toString().slice(-8)}`;
@@ -84,11 +91,12 @@ function POS() {
         customer_id: customerId || null,
         cashier_id: user.id,
         subtotal, tax, discount, total,
-        amount_paid: total,
+        amount_paid: depositAmt,
         payment_method: method,
-        status: "completed",
+        status: method === "credit" && balanceOwed > 0 ? "pending" : "completed",
         is_wholesale: isWholesale,
-        mpesa_reference: method === "mpesa" ? reference!.trim().toUpperCase() : null,
+        mpesa_reference: method === "mpesa" ? opts!.reference!.trim().toUpperCase() : null,
+        notes: method === "credit" ? `Credit sale. Deposit: ${depositAmt}. Balance: ${balanceOwed}` : null,
       }).select().single();
       if (saleErr) throw saleErr;
 
@@ -99,18 +107,32 @@ function POS() {
       const { error: itemsErr } = await supabase.from("sale_items").insert(items);
       if (itemsErr) throw itemsErr;
 
+      if (method === "credit" && balanceOwed > 0) {
+        const cust = customers.find(c => c.id === customerId);
+        const { data: cur } = await supabase.from("customers").select("balance").eq("id", customerId).single();
+        const newBal = Number(cur?.balance ?? 0) + balanceOwed;
+        const { error: balErr } = await supabase.from("customers").update({ balance: newBal }).eq("id", customerId);
+        if (balErr) throw balErr;
+        void cust;
+      }
+
       const cust = customers.find(c => c.id === customerId)?.name;
       const receipt = {
         saleNumber, createdAt: sale.created_at ?? new Date().toISOString(),
         cashier: user.email ?? undefined, customer: cust, isWholesale,
-        paymentMethod: method, mpesaReference: reference?.trim().toUpperCase(),
+        paymentMethod: method === "credit" ? "cash" as const : method,
+        mpesaReference: opts?.reference?.trim().toUpperCase(),
         items: cart.map(x => ({ name: x.product.name, qty: x.qty, price: x.price })),
         subtotal, discount, tax, total,
       };
       if (autoPrint) printThermalReceipt(receipt);
 
-      toast.success(`Sale ${saleNumber} completed — ${fmtKES(total)}`);
-      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setMpesaRef("");
+      if (method === "credit") {
+        toast.success(`Credit sale ${saleNumber} — deposit ${fmtKES(depositAmt)}, balance ${fmtKES(balanceOwed)}`);
+      } else {
+        toast.success(`Sale ${saleNumber} completed — ${fmtKES(total)}`);
+      }
+      setCart([]); setDiscount(0); setCustomerId(""); setPaying(null); setMpesaRef(""); setDeposit(0);
       load();
     } catch (e: any) {
       toast.error(e.message ?? "Sale failed");
