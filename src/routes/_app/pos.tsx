@@ -120,12 +120,17 @@ function POS() {
       const receipt = {
         saleNumber, createdAt: sale.created_at ?? new Date().toISOString(),
         cashier: user.email ?? undefined, customer: cust, isWholesale,
-        paymentMethod: method === "credit" ? "cash" as const : method,
+        paymentMethod: method,
         mpesaReference: opts?.reference?.trim().toUpperCase(),
         items: cart.map(x => ({ name: x.product.name, qty: x.qty, price: x.price })),
         subtotal, discount, tax, total,
+        deposit: method === "credit" ? depositAmt : undefined,
+        balanceOwed: method === "credit" ? balanceOwed : undefined,
       };
-      if (autoPrint) printThermalReceipt(receipt);
+      if (autoPrint) {
+        printThermalReceipt({ ...receipt, copy: "customer" });
+        setTimeout(() => printThermalReceipt({ ...receipt, copy: "shop" }), 400);
+      }
 
       if (method === "credit") {
         toast.success(`Credit sale ${saleNumber} — deposit ${fmtKES(depositAmt)}, balance ${fmtKES(balanceOwed)}`);
