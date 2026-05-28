@@ -143,7 +143,7 @@ function ProductsPage() {
             </div>
             <div className="grid grid-cols-2 gap-3 text-sm">
               <Field label="Name" full><input value={editing.name ?? ""} onChange={e => setEditing({ ...editing, name: e.target.value })} className={inputCls} /></Field>
-              <Field label="Serial #"><input value={editing.sku ?? ""} onChange={e => setEditing({ ...editing, sku: e.target.value })} placeholder="auto (e.g. 001)" className={inputCls} /></Field>
+              <Field label="Serial #"><input value={editing.sku ?? ""} readOnly disabled={!editing.id} placeholder={editing.id ? "" : "auto-assigned (e.g. 001)"} className={inputCls + " opacity-70 cursor-not-allowed"} /></Field>
               <Field label="Barcode"><input value={editing.barcode ?? ""} onChange={e => setEditing({ ...editing, barcode: e.target.value })} className={inputCls} /></Field>
               <Field label="Category">
                 <select value={editing.category_id ?? ""} onChange={e => setEditing({ ...editing, category_id: e.target.value })} className={inputCls}>
