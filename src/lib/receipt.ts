@@ -6,14 +6,18 @@ export type ReceiptData = {
   cashier?: string;
   customer?: string;
   isWholesale: boolean;
-  paymentMethod: "cash" | "mpesa";
+  paymentMethod: "cash" | "mpesa" | "credit";
   mpesaReference?: string;
   items: { name: string; qty: number; price: number }[];
   subtotal: number;
   discount: number;
   tax: number;
   total: number;
+  copy?: "customer" | "shop";
+  deposit?: number;
+  balanceOwed?: number;
 };
+
 
 /**
  * Renders a receipt for a 58mm/80mm thermal printer (32 chars wide)
