@@ -34,9 +34,13 @@ export function printThermalReceipt(r: ReceiptData) {
     return l + " ".repeat(space) + right;
   };
 
+  const copyLabel = r.copy === "shop" ? "SHOP COPY" : "CUSTOMER COPY";
+  const isCredit = r.paymentMethod === "credit";
+
   const rows: string[] = [];
   rows.push(center("BEI POA"));
   rows.push(center("Retail & Wholesale"));
+  rows.push(center(copyLabel));
   rows.push(line());
   rows.push(`Receipt: ${r.saleNumber}`);
   rows.push(fmtDateTime(r.createdAt));
@@ -53,9 +57,19 @@ export function printThermalReceipt(r: ReceiptData) {
   if (r.discount) rows.push(lr("Discount", `-${fmtKES(r.discount)}`));
   rows.push(lr("TOTAL", fmtKES(r.total)));
   rows.push(line());
-  rows.push(lr("Paid", r.paymentMethod.toUpperCase()));
-  if (r.paymentMethod === "mpesa" && r.mpesaReference) {
-    rows.push(lr("M-Pesa Ref", r.mpesaReference));
+  if (isCredit) {
+    rows.push(lr("Paid", "CREDIT"));
+    if (r.deposit && r.deposit > 0) {
+      rows.push(lr("Deposit", fmtKES(r.deposit)));
+    }
+    if (r.balanceOwed && r.balanceOwed > 0) {
+      rows.push(lr("Balance Owed", fmtKES(r.balanceOwed)));
+    }
+  } else {
+    rows.push(lr("Paid", r.paymentMethod.toUpperCase()));
+    if (r.paymentMethod === "mpesa" && r.mpesaReference) {
+      rows.push(lr("M-Pesa Ref", r.mpesaReference));
+    }
   }
   rows.push("");
   rows.push(center("Asante sana!"));
