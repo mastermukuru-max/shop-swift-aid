@@ -38,7 +38,7 @@ export function printThermalReceipt(r: ReceiptData) {
   const isCredit = r.paymentMethod === "credit";
 
   const rows: string[] = [];
-  rows.push(center("BEI POA"));
+  rows.push(center("BEI POA STORES"));
   rows.push(center("Retail & Wholesale"));
   rows.push(center(copyLabel));
   rows.push(line());
