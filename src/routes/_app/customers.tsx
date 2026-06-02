@@ -19,6 +19,9 @@ function CustomersPage() {
   const [editing, setEditing] = useState<Partial<Customer> | null>(null);
   const [paying, setPaying] = useState<Customer | null>(null);
   const [payAmt, setPayAmt] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payRef, setPayRef] = useState("");
+  const [payNotes, setPayNotes] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
@@ -27,12 +30,20 @@ function CustomersPage() {
     if (!paying) return;
     const amt = Number(payAmt);
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    const { error: payErr } = await supabase.from("customer_payments").insert({
+      customer_id: paying.id, amount: amt, method: payMethod,
+      reference: payRef || null, notes: payNotes || null, created_by: uid,
+    });
+    if (payErr) { toast.error(payErr.message); return; }
     const newBal = Math.max(0, Number(paying.balance) - amt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment of ${fmtKES(amt)} recorded`);
-    setPaying(null); setPayAmt(""); load();
+    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes(""); load();
   };
+
 
 
   const save = async () => {
