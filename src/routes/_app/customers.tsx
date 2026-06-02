@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { PageHeader } from "@/components/AppShell";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/customers")({
