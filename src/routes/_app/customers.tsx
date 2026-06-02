@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { PageHeader } from "@/components/AppShell";
-import { Plus, X } from "lucide-react";
+import { Plus, X, Wallet } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/customers")({
@@ -17,9 +17,23 @@ type Customer = { id: string; name: string; phone: string | null; email: string 
 function CustomersPage() {
   const [items, setItems] = useState<Customer[]>([]);
   const [editing, setEditing] = useState<Partial<Customer> | null>(null);
+  const [paying, setPaying] = useState<Customer | null>(null);
+  const [payAmt, setPayAmt] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
+
+  const pay = async () => {
+    if (!paying) return;
+    const amt = Number(payAmt);
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    const newBal = Math.max(0, Number(paying.balance) - amt);
+    const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Payment of ${fmtKES(amt)} recorded`);
+    setPaying(null); setPayAmt(""); load();
+  };
+
 
   const save = async () => {
     if (!editing?.name) { toast.error("Name required"); return; }
@@ -54,24 +68,57 @@ function CustomersPage() {
                 <th className="px-4 py-3 text-right">Balance</th>
                 <th className="px-4 py-3 text-right">Credit Limit</th>
                 <th className="px-4 py-3 text-right">Points</th>
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {items.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-xs text-muted-foreground">No customers yet.</td></tr>}
+              {items.length === 0 && <tr><td colSpan={7} className="text-center py-12 text-xs text-muted-foreground">No customers yet.</td></tr>}
               {items.map(c => (
-                <tr key={c.id} className="hover:bg-muted/50 cursor-pointer" onClick={() => setEditing(c)}>
-                  <td className="px-4 py-3 font-semibold">{c.name}</td>
-                  <td className="px-4 py-3 font-mono text-xs">{c.phone ?? "—"}</td>
-                  <td className="px-4 py-3"><span className={`text-[10px] font-bold tracking-widest uppercase ${c.type === "wholesale" ? "text-primary" : "text-muted-foreground"}`}>{c.type}</span></td>
-                  <td className={`px-4 py-3 text-right font-mono ${Number(c.balance) > 0 ? "text-destructive font-bold" : ""}`}>{fmtKES(c.balance)}</td>
-                  <td className="px-4 py-3 text-right font-mono">{fmtKES(c.credit_limit)}</td>
-                  <td className="px-4 py-3 text-right font-mono">{c.loyalty_points}</td>
+                <tr key={c.id} className="hover:bg-muted/50">
+                  <td className="px-4 py-3 font-semibold cursor-pointer" onClick={() => setEditing(c)}>{c.name}</td>
+                  <td className="px-4 py-3 font-mono text-xs cursor-pointer" onClick={() => setEditing(c)}>{c.phone ?? "—"}</td>
+                  <td className="px-4 py-3 cursor-pointer" onClick={() => setEditing(c)}><span className={`text-[10px] font-bold tracking-widest uppercase ${c.type === "wholesale" ? "text-primary" : "text-muted-foreground"}`}>{c.type}</span></td>
+                  <td className={`px-4 py-3 text-right font-mono cursor-pointer ${Number(c.balance) > 0 ? "text-destructive font-bold" : ""}`} onClick={() => setEditing(c)}>{fmtKES(c.balance)}</td>
+                  <td className="px-4 py-3 text-right font-mono cursor-pointer" onClick={() => setEditing(c)}>{fmtKES(c.credit_limit)}</td>
+                  <td className="px-4 py-3 text-right font-mono cursor-pointer" onClick={() => setEditing(c)}>{c.loyalty_points}</td>
+                  <td className="px-4 py-3 text-right">
+                    {Number(c.balance) > 0 ? (
+                      <button onClick={(e) => { e.stopPropagation(); setPaying(c); setPayAmt(""); }} className="bg-primary text-primary-foreground px-3 py-1.5 text-[10px] font-display font-extrabold tracking-widest inline-flex items-center gap-1.5 hover:bg-primary/90">
+                        <Wallet className="size-3" /> PAY
+                      </button>
+                    ) : <span className="text-muted-foreground text-xs">—</span>}
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </div>
+
+      {paying && (
+        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setPaying(null)}>
+          <div className="bg-card border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between mb-4">
+              <h2 className="text-lg font-display font-extrabold">RECORD PAYMENT</h2>
+              <button onClick={() => setPaying(null)}><X className="size-5" /></button>
+            </div>
+            <div className="mb-4 p-3 bg-muted">
+              <div className="text-xs text-muted-foreground">{paying.name}</div>
+              <div className="text-sm">Outstanding: <span className="font-mono font-bold text-destructive">{fmtKES(paying.balance)}</span></div>
+            </div>
+            <Inp label="Amount Paid (KES)" type="number" v={payAmt} on={setPayAmt} />
+            <div className="flex gap-2 mt-3">
+              <button onClick={() => setPayAmt(String(paying.balance))} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">Pay Full</button>
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setPaying(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Cancel</button>
+              <button onClick={pay} className="bg-primary text-primary-foreground px-6 py-2 text-xs font-display font-extrabold tracking-tight">RECORD PAYMENT</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
 
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setEditing(null)}>
