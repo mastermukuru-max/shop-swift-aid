@@ -40,7 +40,7 @@ function LoginPage() {
       <div className="flex items-center justify-center w-full">
         <div className="w-full max-w-sm">
           <div className="bg-primary text-primary-foreground font-display font-extrabold text-xl px-3 py-1 inline-block mb-6">
-            BEI POA
+            BEI POA STORES
           </div>
           <h1 className="text-2xl font-display font-extrabold tracking-tight">Sign in</h1>
           <p className="text-sm text-muted-foreground mt-1 mb-6">
