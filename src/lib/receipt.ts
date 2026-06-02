@@ -40,6 +40,8 @@ export function printThermalReceipt(r: ReceiptData) {
   const rows: string[] = [];
   rows.push(center("BEI POA STORES"));
   rows.push(center("Retail & Wholesale"));
+  rows.push(center("Paybill - 507900"));
+  rows.push(center("Account Number - 4062418"));
   rows.push(center(copyLabel));
   rows.push(line());
   rows.push(`Receipt: ${r.saleNumber}`);
