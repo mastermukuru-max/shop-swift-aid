@@ -17,9 +17,23 @@ type Customer = { id: string; name: string; phone: string | null; email: string 
 function CustomersPage() {
   const [items, setItems] = useState<Customer[]>([]);
   const [editing, setEditing] = useState<Partial<Customer> | null>(null);
+  const [paying, setPaying] = useState<Customer | null>(null);
+  const [payAmt, setPayAmt] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
+
+  const pay = async () => {
+    if (!paying) return;
+    const amt = Number(payAmt);
+    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    const newBal = Math.max(0, Number(paying.balance) - amt);
+    const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Payment of ${fmtKES(amt)} recorded`);
+    setPaying(null); setPayAmt(""); load();
+  };
+
 
   const save = async () => {
     if (!editing?.name) { toast.error("Name required"); return; }
