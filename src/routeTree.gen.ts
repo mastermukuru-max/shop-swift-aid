@@ -18,6 +18,7 @@ import { Route as AppSalesRouteImport } from './routes/_app/sales'
 import { Route as AppProfitRouteImport } from './routes/_app/profit'
 import { Route as AppProductsRouteImport } from './routes/_app/products'
 import { Route as AppPosRouteImport } from './routes/_app/pos'
+import { Route as AppDebtsRouteImport } from './routes/_app/debts'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCustomersRouteImport } from './routes/_app/customers'
 
@@ -65,6 +66,11 @@ const AppPosRoute = AppPosRouteImport.update({
   path: '/pos',
   getParentRoute: () => AppRoute,
 } as any)
+const AppDebtsRoute = AppDebtsRouteImport.update({
+  id: '/debts',
+  path: '/debts',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
@@ -81,6 +87,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/debts': typeof AppDebtsRoute
   '/pos': typeof AppPosRoute
   '/products': typeof AppProductsRoute
   '/profit': typeof AppProfitRoute
@@ -93,6 +100,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/customers': typeof AppCustomersRoute
   '/dashboard': typeof AppDashboardRoute
+  '/debts': typeof AppDebtsRoute
   '/pos': typeof AppPosRoute
   '/products': typeof AppProductsRoute
   '/profit': typeof AppProfitRoute
@@ -107,6 +115,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/_app/customers': typeof AppCustomersRoute
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/debts': typeof AppDebtsRoute
   '/_app/pos': typeof AppPosRoute
   '/_app/products': typeof AppProductsRoute
   '/_app/profit': typeof AppProfitRoute
@@ -121,6 +130,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/customers'
     | '/dashboard'
+    | '/debts'
     | '/pos'
     | '/products'
     | '/profit'
@@ -133,6 +143,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/customers'
     | '/dashboard'
+    | '/debts'
     | '/pos'
     | '/products'
     | '/profit'
@@ -146,6 +157,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/_app/customers'
     | '/_app/dashboard'
+    | '/_app/debts'
     | '/_app/pos'
     | '/_app/products'
     | '/_app/profit'
@@ -225,6 +237,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppPosRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/debts': {
+      id: '/_app/debts'
+      path: '/debts'
+      fullPath: '/debts'
+      preLoaderRoute: typeof AppDebtsRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/dashboard': {
       id: '/_app/dashboard'
       path: '/dashboard'
@@ -245,6 +264,7 @@ declare module '@tanstack/react-router' {
 interface AppRouteChildren {
   AppCustomersRoute: typeof AppCustomersRoute
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDebtsRoute: typeof AppDebtsRoute
   AppPosRoute: typeof AppPosRoute
   AppProductsRoute: typeof AppProductsRoute
   AppProfitRoute: typeof AppProfitRoute
@@ -256,6 +276,7 @@ interface AppRouteChildren {
 const AppRouteChildren: AppRouteChildren = {
   AppCustomersRoute: AppCustomersRoute,
   AppDashboardRoute: AppDashboardRoute,
+  AppDebtsRoute: AppDebtsRoute,
   AppPosRoute: AppPosRoute,
   AppProductsRoute: AppProductsRoute,
   AppProfitRoute: AppProfitRoute,

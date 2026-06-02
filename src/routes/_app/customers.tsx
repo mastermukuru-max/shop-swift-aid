@@ -19,6 +19,9 @@ function CustomersPage() {
   const [editing, setEditing] = useState<Partial<Customer> | null>(null);
   const [paying, setPaying] = useState<Customer | null>(null);
   const [payAmt, setPayAmt] = useState("");
+  const [payMethod, setPayMethod] = useState("cash");
+  const [payRef, setPayRef] = useState("");
+  const [payNotes, setPayNotes] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
@@ -27,12 +30,20 @@ function CustomersPage() {
     if (!paying) return;
     const amt = Number(payAmt);
     if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    const { error: payErr } = await supabase.from("customer_payments").insert({
+      customer_id: paying.id, amount: amt, method: payMethod,
+      reference: payRef || null, notes: payNotes || null, created_by: uid,
+    });
+    if (payErr) { toast.error(payErr.message); return; }
     const newBal = Math.max(0, Number(paying.balance) - amt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment of ${fmtKES(amt)} recorded`);
-    setPaying(null); setPayAmt(""); load();
+    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes(""); load();
   };
+
 
 
   const save = async () => {
@@ -106,9 +117,17 @@ function CustomersPage() {
               <div className="text-xs text-muted-foreground">{paying.name}</div>
               <div className="text-sm">Outstanding: <span className="font-mono font-bold text-destructive">{fmtKES(paying.balance)}</span></div>
             </div>
-            <Inp label="Amount Paid (KES)" type="number" v={payAmt} on={setPayAmt} />
-            <div className="flex gap-2 mt-3">
-              <button onClick={() => setPayAmt(String(paying.balance))} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">Pay Full</button>
+            <div className="space-y-3">
+              <Inp label="Amount Paid (KES)" type="number" v={payAmt} on={setPayAmt} />
+              <button type="button" onClick={() => setPayAmt(String(paying.balance))} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">Pay Full</button>
+              <label className="block">
+                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Method</div>
+                <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-secondary px-3 py-2 text-sm outline-none">
+                  <option value="cash">Cash</option><option value="mpesa">M-Pesa</option><option value="bank">Bank</option><option value="other">Other</option>
+                </select>
+              </label>
+              <Inp label="Reference (M-Pesa code, txn id)" v={payRef} on={setPayRef} />
+              <Inp label="Notes" v={payNotes} on={setPayNotes} />
             </div>
             <div className="flex justify-end gap-2 mt-6">
               <button onClick={() => setPaying(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Cancel</button>
