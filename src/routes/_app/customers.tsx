@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { PageHeader } from "@/components/AppShell";
-import { Plus, X, Wallet } from "lucide-react";
+import { Plus, X, Wallet, Printer, Check } from "lucide-react";
 import { toast } from "sonner";
+import { printPaymentReceipt, type PaymentReceiptData } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_app/customers")({
   component: CustomersPage,
