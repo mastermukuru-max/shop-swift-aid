@@ -205,6 +205,42 @@ function CustomersPage() {
 
 
 
+      {confirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setConfirm(null)}>
+          <div className="bg-card border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between mb-4">
+              <h2 className="text-lg font-display font-extrabold flex items-center gap-2"><Check className="size-5 text-primary" /> PAYMENT RECORDED</h2>
+              <button onClick={() => setConfirm(null)}><X className="size-5" /></button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <Row k="Customer" v={confirm.customer} />
+              <Row k="Date" v={new Date(confirm.createdAt).toLocaleString()} />
+              {confirm.cashier && <Row k="Cashier" v={confirm.cashier} />}
+              <div className="border-t border-border my-2" />
+              {confirm.cashAmount > 0 && <Row k="Cash" v={fmtKES(confirm.cashAmount)} />}
+              {confirm.mpesaAmount > 0 && <Row k="M-Pesa" v={fmtKES(confirm.mpesaAmount)} />}
+              {confirm.mpesaReference && <Row k="M-Pesa Ref" v={confirm.mpesaReference} mono />}
+              <Row k="Method" v={confirm.cashAmount > 0 && confirm.mpesaAmount > 0 ? "Split" : confirm.mpesaAmount > 0 ? "M-Pesa" : "Cash"} />
+              <div className="border-t border-border my-2" />
+              <div className="flex justify-between font-bold text-base">
+                <span>TOTAL PAID</span>
+                <span className="font-mono text-primary">{fmtKES(confirm.cashAmount + confirm.mpesaAmount)}</span>
+              </div>
+              <div className="border-t border-border my-2" />
+              <Row k="Previous Balance" v={fmtKES(confirm.previousBalance)} />
+              <Row k="New Balance" v={fmtKES(confirm.newBalance)} accent={confirm.newBalance > 0 ? "text-destructive" : "text-primary"} />
+              {confirm.notes && <Row k="Notes" v={confirm.notes} />}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setConfirm(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Done</button>
+              <button onClick={() => printPaymentReceipt(confirm)} className="bg-primary text-primary-foreground px-6 py-2 text-xs font-display font-extrabold tracking-tight flex items-center gap-2">
+                <Printer className="size-4" /> PRINT RECEIPT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setEditing(null)}>
           <div className="bg-card border border-border w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
