@@ -22,26 +22,47 @@ function CustomersPage() {
   const [payMethod, setPayMethod] = useState("cash");
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
+  const [splitMode, setSplitMode] = useState(false);
+  const [cashAmt, setCashAmt] = useState("");
+  const [mpesaAmt, setMpesaAmt] = useState("");
+  const [mpesaRef, setMpesaRef] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
 
+  const resetPay = () => {
+    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes("");
+    setSplitMode(false); setCashAmt(""); setMpesaAmt(""); setMpesaRef("");
+  };
+
   const pay = async () => {
     if (!paying) return;
-    const amt = Number(payAmt);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id;
-    const { error: payErr } = await supabase.from("customer_payments").insert({
-      customer_id: paying.id, amount: amt, method: payMethod,
-      reference: payRef || null, notes: payNotes || null, created_by: uid,
-    });
+    let totalAmt = 0;
+    const inserts: any[] = [];
+
+    if (splitMode) {
+      const cash = Number(cashAmt) || 0;
+      const mp = Number(mpesaAmt) || 0;
+      if (cash <= 0 && mp <= 0) { toast.error("Enter at least one amount"); return; }
+      totalAmt = cash + mp;
+      if (cash > 0) inserts.push({ customer_id: paying.id, amount: cash, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
+      if (mp > 0) inserts.push({ customer_id: paying.id, amount: mp, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
+    } else {
+      const amt = Number(payAmt);
+      if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+      totalAmt = amt;
+      inserts.push({ customer_id: paying.id, amount: amt, method: payMethod, reference: payRef || null, notes: payNotes || null, created_by: uid });
+    }
+
+    const { error: payErr } = await supabase.from("customer_payments").insert(inserts);
     if (payErr) { toast.error(payErr.message); return; }
-    const newBal = Math.max(0, Number(paying.balance) - amt);
+    const newBal = Math.max(0, Number(paying.balance) - totalAmt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(`Payment of ${fmtKES(amt)} recorded`);
-    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes(""); load();
+    toast.success(`Payment of ${fmtKES(totalAmt)} recorded`);
+    resetPay(); load();
   };
 
 
@@ -107,30 +128,52 @@ function CustomersPage() {
       </div>
 
       {paying && (
-        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setPaying(null)}>
+        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={resetPay}>
           <div className="bg-card border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between mb-4">
               <h2 className="text-lg font-display font-extrabold">RECORD PAYMENT</h2>
-              <button onClick={() => setPaying(null)}><X className="size-5" /></button>
+              <button onClick={resetPay}><X className="size-5" /></button>
             </div>
             <div className="mb-4 p-3 bg-muted">
               <div className="text-xs text-muted-foreground">{paying.name}</div>
               <div className="text-sm">Outstanding: <span className="font-mono font-bold text-destructive">{fmtKES(paying.balance)}</span></div>
             </div>
-            <div className="space-y-3">
-              <Inp label="Amount Paid (KES)" type="number" v={payAmt} on={setPayAmt} />
-              <button type="button" onClick={() => setPayAmt(String(paying.balance))} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">Pay Full</button>
-              <label className="block">
-                <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Method</div>
-                <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-secondary px-3 py-2 text-sm outline-none">
-                  <option value="cash">Cash</option><option value="mpesa">M-Pesa</option><option value="bank">Bank</option><option value="other">Other</option>
-                </select>
-              </label>
-              <Inp label="Reference (M-Pesa code, txn id)" v={payRef} on={setPayRef} />
-              <Inp label="Notes" v={payNotes} on={setPayNotes} />
+
+            <div className="flex border border-border mb-4">
+              <button onClick={() => setSplitMode(false)} className={`flex-1 px-3 py-2 text-[10px] font-display font-extrabold tracking-widest ${!splitMode ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>SINGLE METHOD</button>
+              <button onClick={() => setSplitMode(true)} className={`flex-1 px-3 py-2 text-[10px] font-display font-extrabold tracking-widest ${splitMode ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>SPLIT (CASH + M-PESA)</button>
             </div>
+
+            {!splitMode ? (
+              <div className="space-y-3">
+                <Inp label="Amount Paid (KES)" type="number" v={payAmt} on={setPayAmt} />
+                <button type="button" onClick={() => setPayAmt(String(paying.balance))} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">Pay Full</button>
+                <label className="block">
+                  <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">Method</div>
+                  <select value={payMethod} onChange={e => setPayMethod(e.target.value)} className="w-full bg-secondary px-3 py-2 text-sm outline-none">
+                    <option value="cash">Cash</option><option value="mpesa">M-Pesa</option><option value="bank">Bank</option><option value="other">Other</option>
+                  </select>
+                </label>
+                <Inp label="Reference (M-Pesa code, txn id)" v={payRef} on={setPayRef} />
+                <Inp label="Notes" v={payNotes} on={setPayNotes} />
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <Inp label="Cash Amount (KES)" type="number" v={cashAmt} on={setCashAmt} />
+                <Inp label="M-Pesa Amount (KES)" type="number" v={mpesaAmt} on={setMpesaAmt} />
+                <Inp label="M-Pesa Reference" v={mpesaRef} on={setMpesaRef} />
+                <div className="p-3 bg-muted flex justify-between text-sm">
+                  <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Total</span>
+                  <span className="font-mono font-bold text-primary">{fmtKES((Number(cashAmt) || 0) + (Number(mpesaAmt) || 0))}</span>
+                </div>
+                <button type="button" onClick={() => { setCashAmt(""); setMpesaAmt(String(paying.balance)); }} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted mr-2">All M-Pesa</button>
+                <button type="button" onClick={() => { setMpesaAmt(""); setCashAmt(String(paying.balance)); }} className="text-[10px] font-mono uppercase tracking-widest px-3 py-1.5 bg-secondary hover:bg-muted">All Cash</button>
+                <Inp label="Notes" v={payNotes} on={setPayNotes} />
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 mt-6">
-              <button onClick={() => setPaying(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Cancel</button>
+              <button onClick={resetPay} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Cancel</button>
               <button onClick={pay} className="bg-primary text-primary-foreground px-6 py-2 text-xs font-display font-extrabold tracking-tight">RECORD PAYMENT</button>
             </div>
           </div>
