@@ -22,26 +22,47 @@ function CustomersPage() {
   const [payMethod, setPayMethod] = useState("cash");
   const [payRef, setPayRef] = useState("");
   const [payNotes, setPayNotes] = useState("");
+  const [splitMode, setSplitMode] = useState(false);
+  const [cashAmt, setCashAmt] = useState("");
+  const [mpesaAmt, setMpesaAmt] = useState("");
+  const [mpesaRef, setMpesaRef] = useState("");
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
 
+  const resetPay = () => {
+    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes("");
+    setSplitMode(false); setCashAmt(""); setMpesaAmt(""); setMpesaRef("");
+  };
+
   const pay = async () => {
     if (!paying) return;
-    const amt = Number(payAmt);
-    if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id;
-    const { error: payErr } = await supabase.from("customer_payments").insert({
-      customer_id: paying.id, amount: amt, method: payMethod,
-      reference: payRef || null, notes: payNotes || null, created_by: uid,
-    });
+    let totalAmt = 0;
+    const inserts: any[] = [];
+
+    if (splitMode) {
+      const cash = Number(cashAmt) || 0;
+      const mp = Number(mpesaAmt) || 0;
+      if (cash <= 0 && mp <= 0) { toast.error("Enter at least one amount"); return; }
+      totalAmt = cash + mp;
+      if (cash > 0) inserts.push({ customer_id: paying.id, amount: cash, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
+      if (mp > 0) inserts.push({ customer_id: paying.id, amount: mp, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
+    } else {
+      const amt = Number(payAmt);
+      if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
+      totalAmt = amt;
+      inserts.push({ customer_id: paying.id, amount: amt, method: payMethod, reference: payRef || null, notes: payNotes || null, created_by: uid });
+    }
+
+    const { error: payErr } = await supabase.from("customer_payments").insert(inserts);
     if (payErr) { toast.error(payErr.message); return; }
-    const newBal = Math.max(0, Number(paying.balance) - amt);
+    const newBal = Math.max(0, Number(paying.balance) - totalAmt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
-    toast.success(`Payment of ${fmtKES(amt)} recorded`);
-    setPaying(null); setPayAmt(""); setPayMethod("cash"); setPayRef(""); setPayNotes(""); load();
+    toast.success(`Payment of ${fmtKES(totalAmt)} recorded`);
+    resetPay(); load();
   };
 
 
