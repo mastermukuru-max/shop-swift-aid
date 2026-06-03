@@ -3,8 +3,9 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { PageHeader } from "@/components/AppShell";
-import { Plus, X, Wallet } from "lucide-react";
+import { Plus, X, Wallet, Printer, Check } from "lucide-react";
 import { toast } from "sonner";
+import { printPaymentReceipt, type PaymentReceiptData } from "@/lib/receipt";
 
 export const Route = createFileRoute("/_app/customers")({
   component: CustomersPage,
@@ -26,6 +27,7 @@ function CustomersPage() {
   const [cashAmt, setCashAmt] = useState("");
   const [mpesaAmt, setMpesaAmt] = useState("");
   const [mpesaRef, setMpesaRef] = useState("");
+  const [confirm, setConfirm] = useState<PaymentReceiptData | null>(null);
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
@@ -39,29 +41,50 @@ function CustomersPage() {
     if (!paying) return;
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id;
-    let totalAmt = 0;
+    let cashPart = 0, mpesaPart = 0, refUsed = "";
     const inserts: any[] = [];
 
     if (splitMode) {
-      const cash = Number(cashAmt) || 0;
-      const mp = Number(mpesaAmt) || 0;
-      if (cash <= 0 && mp <= 0) { toast.error("Enter at least one amount"); return; }
-      totalAmt = cash + mp;
-      if (cash > 0) inserts.push({ customer_id: paying.id, amount: cash, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
-      if (mp > 0) inserts.push({ customer_id: paying.id, amount: mp, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
+      cashPart = Number(cashAmt) || 0;
+      mpesaPart = Number(mpesaAmt) || 0;
+      refUsed = mpesaRef;
+      if (cashPart <= 0 && mpesaPart <= 0) { toast.error("Enter at least one amount"); return; }
+      if (cashPart > 0) inserts.push({ customer_id: paying.id, amount: cashPart, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
+      if (mpesaPart > 0) inserts.push({ customer_id: paying.id, amount: mpesaPart, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
     } else {
       const amt = Number(payAmt);
       if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
-      totalAmt = amt;
+      if (payMethod === "mpesa") { mpesaPart = amt; refUsed = payRef; }
+      else if (payMethod === "cash") cashPart = amt;
+      else { cashPart = amt; }
       inserts.push({ customer_id: paying.id, amount: amt, method: payMethod, reference: payRef || null, notes: payNotes || null, created_by: uid });
     }
 
+    const totalAmt = cashPart + mpesaPart;
+    const { data: u } = await supabase.auth.getUser();
+    let cashierName = u.user?.email ?? "";
+    const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", uid as string).maybeSingle();
+    if (prof?.full_name) cashierName = prof.full_name;
+
     const { error: payErr } = await supabase.from("customer_payments").insert(inserts);
     if (payErr) { toast.error(payErr.message); return; }
-    const newBal = Math.max(0, Number(paying.balance) - totalAmt);
+    const prevBal = Number(paying.balance);
+    const newBal = Math.max(0, prevBal - totalAmt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment of ${fmtKES(totalAmt)} recorded`);
+
+    setConfirm({
+      customer: paying.name,
+      createdAt: new Date().toISOString(),
+      cashier: cashierName,
+      cashAmount: cashPart,
+      mpesaAmount: mpesaPart,
+      mpesaReference: refUsed || undefined,
+      notes: payNotes || undefined,
+      previousBalance: prevBal,
+      newBalance: newBal,
+    });
     resetPay(); load();
   };
 
@@ -182,6 +205,42 @@ function CustomersPage() {
 
 
 
+      {confirm && (
+        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setConfirm(null)}>
+          <div className="bg-card border border-border w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between mb-4">
+              <h2 className="text-lg font-display font-extrabold flex items-center gap-2"><Check className="size-5 text-primary" /> PAYMENT RECORDED</h2>
+              <button onClick={() => setConfirm(null)}><X className="size-5" /></button>
+            </div>
+            <div className="space-y-2 text-sm">
+              <Row k="Customer" v={confirm.customer} />
+              <Row k="Date" v={new Date(confirm.createdAt).toLocaleString()} />
+              {confirm.cashier && <Row k="Cashier" v={confirm.cashier} />}
+              <div className="border-t border-border my-2" />
+              {confirm.cashAmount > 0 && <Row k="Cash" v={fmtKES(confirm.cashAmount)} />}
+              {confirm.mpesaAmount > 0 && <Row k="M-Pesa" v={fmtKES(confirm.mpesaAmount)} />}
+              {confirm.mpesaReference && <Row k="M-Pesa Ref" v={confirm.mpesaReference} mono />}
+              <Row k="Method" v={confirm.cashAmount > 0 && confirm.mpesaAmount > 0 ? "Split" : confirm.mpesaAmount > 0 ? "M-Pesa" : "Cash"} />
+              <div className="border-t border-border my-2" />
+              <div className="flex justify-between font-bold text-base">
+                <span>TOTAL PAID</span>
+                <span className="font-mono text-primary">{fmtKES(confirm.cashAmount + confirm.mpesaAmount)}</span>
+              </div>
+              <div className="border-t border-border my-2" />
+              <Row k="Previous Balance" v={fmtKES(confirm.previousBalance)} />
+              <Row k="New Balance" v={fmtKES(confirm.newBalance)} accent={confirm.newBalance > 0 ? "text-destructive" : "text-primary"} />
+              {confirm.notes && <Row k="Notes" v={confirm.notes} />}
+            </div>
+            <div className="flex justify-end gap-2 mt-6">
+              <button onClick={() => setConfirm(null)} className="px-4 py-2 text-xs font-bold uppercase tracking-widest hover:bg-muted">Done</button>
+              <button onClick={() => printPaymentReceipt(confirm)} className="bg-primary text-primary-foreground px-6 py-2 text-xs font-display font-extrabold tracking-tight flex items-center gap-2">
+                <Printer className="size-4" /> PRINT RECEIPT
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {editing && (
         <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setEditing(null)}>
           <div className="bg-card border border-border w-full max-w-lg p-6" onClick={e => e.stopPropagation()}>
@@ -218,5 +277,14 @@ function Inp({ label, v, on, type = "text" }: { label: string; v: string; on: (v
       <div className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground mb-1">{label}</div>
       <input type={type} value={v} onChange={e => on(e.target.value)} className="w-full bg-secondary border border-border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary" />
     </label>
+  );
+}
+
+function Row({ k, v, mono, accent = "" }: { k: string; v: string; mono?: boolean; accent?: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground text-xs">{k}</span>
+      <span className={`${mono ? "font-mono text-xs" : ""} ${accent}`}>{v}</span>
+    </div>
   );
 }

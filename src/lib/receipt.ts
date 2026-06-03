@@ -107,3 +107,78 @@ export function printThermalReceipt(r: ReceiptData) {
     w.close();
   }, 200);
 }
+
+export type PaymentReceiptData = {
+  customer: string;
+  createdAt: string;
+  cashier?: string;
+  cashAmount: number;
+  mpesaAmount: number;
+  mpesaReference?: string;
+  notes?: string;
+  previousBalance: number;
+  newBalance: number;
+};
+
+export function printPaymentReceipt(r: PaymentReceiptData) {
+  const W = 32;
+  const line = (ch = "-") => ch.repeat(W);
+  const center = (s: string) =>
+    s.length >= W ? s : " ".repeat(Math.floor((W - s.length) / 2)) + s;
+  const lr = (l: string, right: string) => {
+    const space = Math.max(1, W - l.length - right.length);
+    return l + " ".repeat(space) + right;
+  };
+  const total = r.cashAmount + r.mpesaAmount;
+  const method =
+    r.cashAmount > 0 && r.mpesaAmount > 0 ? "SPLIT"
+    : r.mpesaAmount > 0 ? "M-PESA" : "CASH";
+
+  const rows: string[] = [];
+  rows.push(center("BEI POA STORES"));
+  rows.push(center("Retail & Wholesale"));
+  rows.push(center("Paybill - 507900"));
+  rows.push(center("Account Number - 4062418"));
+  rows.push(center("PAYMENT RECEIPT"));
+  rows.push(line());
+  rows.push(fmtDateTime(r.createdAt));
+  if (r.cashier) rows.push(`Cashier: ${r.cashier}`);
+  rows.push(`Customer: ${r.customer}`);
+  rows.push(line());
+  if (r.cashAmount > 0) rows.push(lr("Cash", fmtKES(r.cashAmount)));
+  if (r.mpesaAmount > 0) rows.push(lr("M-Pesa", fmtKES(r.mpesaAmount)));
+  if (r.mpesaReference) rows.push(lr("M-Pesa Ref", r.mpesaReference));
+  rows.push(line());
+  rows.push(lr("TOTAL PAID", fmtKES(total)));
+  rows.push(lr("Method", method));
+  rows.push(line());
+  rows.push(lr("Previous Balance", fmtKES(r.previousBalance)));
+  rows.push(lr("New Balance", fmtKES(r.newBalance)));
+  if (r.notes) { rows.push(line()); rows.push(`Notes: ${r.notes}`); }
+  rows.push("");
+  rows.push(center("Asante sana!"));
+  rows.push("");
+  rows.push("");
+
+  const body = rows.join("\n");
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payment ${r.createdAt}</title>
+<style>
+  @page { margin: 0; size: 58mm auto; }
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.35;
+    width: 58mm; padding: 4mm 3mm; white-space: pre; color: #000; }
+  @media print { body { width: auto; } }
+</style></head><body>${body.replace(/</g, "&lt;")}</body></html>`;
+
+  const w = window.open("", "PRINT", "width=380,height=640");
+  if (!w) {
+    const blob = new Blob([html], { type: "text/html" });
+    window.open(URL.createObjectURL(blob), "_blank");
+    return;
+  }
+  w.document.open();
+  w.document.write(html);
+  w.document.close();
+  w.focus();
+  setTimeout(() => { w.print(); w.close(); }, 200);
+}
