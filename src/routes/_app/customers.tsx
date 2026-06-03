@@ -279,3 +279,12 @@ function Inp({ label, v, on, type = "text" }: { label: string; v: string; on: (v
     </label>
   );
 }
+
+function Row({ k, v, mono, accent = "" }: { k: string; v: string; mono?: boolean; accent?: string }) {
+  return (
+    <div className="flex justify-between">
+      <span className="text-muted-foreground text-xs">{k}</span>
+      <span className={`${mono ? "font-mono text-xs" : ""} ${accent}`}>{v}</span>
+    </div>
+  );
+}
