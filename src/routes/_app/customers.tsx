@@ -27,6 +27,7 @@ function CustomersPage() {
   const [cashAmt, setCashAmt] = useState("");
   const [mpesaAmt, setMpesaAmt] = useState("");
   const [mpesaRef, setMpesaRef] = useState("");
+  const [confirm, setConfirm] = useState<PaymentReceiptData | null>(null);
 
   const load = () => supabase.from("customers").select("*").order("name").then(({ data }) => setItems((data as any) ?? []));
   useEffect(() => { load(); }, []);
@@ -40,29 +41,50 @@ function CustomersPage() {
     if (!paying) return;
     const { data: userRes } = await supabase.auth.getUser();
     const uid = userRes.user?.id;
-    let totalAmt = 0;
+    let cashPart = 0, mpesaPart = 0, refUsed = "";
     const inserts: any[] = [];
 
     if (splitMode) {
-      const cash = Number(cashAmt) || 0;
-      const mp = Number(mpesaAmt) || 0;
-      if (cash <= 0 && mp <= 0) { toast.error("Enter at least one amount"); return; }
-      totalAmt = cash + mp;
-      if (cash > 0) inserts.push({ customer_id: paying.id, amount: cash, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
-      if (mp > 0) inserts.push({ customer_id: paying.id, amount: mp, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
+      cashPart = Number(cashAmt) || 0;
+      mpesaPart = Number(mpesaAmt) || 0;
+      refUsed = mpesaRef;
+      if (cashPart <= 0 && mpesaPart <= 0) { toast.error("Enter at least one amount"); return; }
+      if (cashPart > 0) inserts.push({ customer_id: paying.id, amount: cashPart, method: "cash", reference: null, notes: payNotes || null, created_by: uid });
+      if (mpesaPart > 0) inserts.push({ customer_id: paying.id, amount: mpesaPart, method: "mpesa", reference: mpesaRef || null, notes: payNotes || null, created_by: uid });
     } else {
       const amt = Number(payAmt);
       if (!amt || amt <= 0) { toast.error("Enter a valid amount"); return; }
-      totalAmt = amt;
+      if (payMethod === "mpesa") { mpesaPart = amt; refUsed = payRef; }
+      else if (payMethod === "cash") cashPart = amt;
+      else { cashPart = amt; }
       inserts.push({ customer_id: paying.id, amount: amt, method: payMethod, reference: payRef || null, notes: payNotes || null, created_by: uid });
     }
 
+    const totalAmt = cashPart + mpesaPart;
+    const { data: u } = await supabase.auth.getUser();
+    let cashierName = u.user?.email ?? "";
+    const { data: prof } = await supabase.from("profiles").select("full_name").eq("id", uid as string).maybeSingle();
+    if (prof?.full_name) cashierName = prof.full_name;
+
     const { error: payErr } = await supabase.from("customer_payments").insert(inserts);
     if (payErr) { toast.error(payErr.message); return; }
-    const newBal = Math.max(0, Number(paying.balance) - totalAmt);
+    const prevBal = Number(paying.balance);
+    const newBal = Math.max(0, prevBal - totalAmt);
     const { error } = await supabase.from("customers").update({ balance: newBal }).eq("id", paying.id);
     if (error) { toast.error(error.message); return; }
     toast.success(`Payment of ${fmtKES(totalAmt)} recorded`);
+
+    setConfirm({
+      customer: paying.name,
+      createdAt: new Date().toISOString(),
+      cashier: cashierName,
+      cashAmount: cashPart,
+      mpesaAmount: mpesaPart,
+      mpesaReference: refUsed || undefined,
+      notes: payNotes || undefined,
+      previousBalance: prevBal,
+      newBalance: newBal,
+    });
     resetPay(); load();
   };
 
