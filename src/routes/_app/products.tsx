@@ -135,8 +135,8 @@ function ProductsPage() {
       </div>
 
       {editing && (
-        <div className="fixed inset-0 bg-black/50 z-50 grid place-items-center p-4" onClick={() => setEditing(null)}>
-          <div className="bg-card border border-border w-full max-w-2xl p-6 max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 overflow-y-auto p-4 flex items-start justify-center" onClick={() => setEditing(null)}>
+          <div className="bg-card border border-border w-full max-w-2xl p-6 mt-8 mb-8 sticky top-4" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-display font-extrabold">{editing.id ? "EDIT PRODUCT" : "NEW PRODUCT"}</h2>
               <button onClick={() => setEditing(null)}><X className="size-5" /></button>
