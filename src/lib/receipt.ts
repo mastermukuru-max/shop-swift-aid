@@ -25,7 +25,7 @@ export type ReceiptData = {
  * with no margins to print.
  */
 export function printThermalReceipt(r: ReceiptData) {
-  const W = 32;
+  const W = 28;
   const line = (ch = "-") => ch.repeat(W);
   const center = (s: string) =>
     s.length >= W ? s : " ".repeat(Math.floor((W - s.length) / 2)) + s;
@@ -84,9 +84,9 @@ export function printThermalReceipt(r: ReceiptData) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${r.saleNumber}</title>
 <style>
   @page { margin: 0; size: 58mm auto; }
-  html, body { margin: 0; padding: 0; }
-  body { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.35;
-    width: 58mm; padding: 4mm 3mm; white-space: pre; color: #000; }
+  html, body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 700; line-height: 1.5;
+    width: 58mm; padding: 4mm 2mm; white-space: pre; color: #000; -webkit-font-smoothing: none; }
   @media print { body { width: auto; } }
 </style></head><body>${body.replace(/</g, "&lt;")}</body></html>`;
 
@@ -121,7 +121,7 @@ export type PaymentReceiptData = {
 };
 
 export function printPaymentReceipt(r: PaymentReceiptData) {
-  const W = 32;
+  const W = 28;
   const line = (ch = "-") => ch.repeat(W);
   const center = (s: string) =>
     s.length >= W ? s : " ".repeat(Math.floor((W - s.length) / 2)) + s;
@@ -164,9 +164,9 @@ export function printPaymentReceipt(r: PaymentReceiptData) {
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payment ${r.createdAt}</title>
 <style>
   @page { margin: 0; size: 58mm auto; }
-  html, body { margin: 0; padding: 0; }
-  body { font-family: 'Courier New', monospace; font-size: 12px; line-height: 1.35;
-    width: 58mm; padding: 4mm 3mm; white-space: pre; color: #000; }
+  html, body { margin: 0; padding: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { font-family: 'Courier New', Courier, monospace; font-size: 13px; font-weight: 700; line-height: 1.5;
+    width: 58mm; padding: 4mm 2mm; white-space: pre; color: #000; -webkit-font-smoothing: none; }
   @media print { body { width: auto; } }
 </style></head><body>${body.replace(/</g, "&lt;")}</body></html>`;
 
