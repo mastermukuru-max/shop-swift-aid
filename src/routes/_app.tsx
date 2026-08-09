@@ -15,6 +15,7 @@ function AppLayout() {
     if (!loading && !session) router.navigate({ to: "/login" });
   }, [loading, session, router]);
 
+
   if (loading) {
     return <div className="min-h-screen grid place-items-center text-xs font-mono text-muted-foreground tracking-widest">LOADING…</div>;
   }
