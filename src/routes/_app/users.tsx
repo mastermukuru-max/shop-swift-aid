@@ -22,6 +22,25 @@ function UsersPage() {
   const [form, setForm] = useState({ fullName: "", email: "", password: "", role: "cashier" as AppRole });
   const [busy, setBusy] = useState(false);
   const createUser = useServerFn(createStaffUser);
+  const resetPassword = useServerFn(resetStaffPassword);
+  const [resetFor, setResetFor] = useState<{ id: string; name: string } | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+
+  const handleReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetFor) return;
+    setBusy(true);
+    try {
+      await resetPassword({ data: { userId: resetFor.id, password: newPassword } });
+      toast.success(`Password reset for ${resetFor.name}`);
+      setResetFor(null);
+      setNewPassword("");
+    } catch (err: any) {
+      toast.error(err.message ?? "Failed to reset password");
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const load = async () => {
     const [{ data: profiles }, { data: roles }] = await Promise.all([
