@@ -162,6 +162,7 @@ function UsersPage() {
                 <th className="px-4 py-3 text-left">Email</th>
                 <th className="px-4 py-3 text-left">Joined</th>
                 {ROLES.map(r => <th key={r} className="px-2 py-3 text-center">{r.replace("_", " ")}</th>)}
+                <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
@@ -178,6 +179,14 @@ function UsersPage() {
                       </td>
                     );
                   })}
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      onClick={() => { setResetFor({ id: u.id, name: u.full_name || u.email }); setNewPassword(""); }}
+                      className="text-[10px] font-display font-extrabold tracking-widest px-3 py-1.5 border border-border hover:bg-muted"
+                    >
+                      RESET PASSWORD
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -187,6 +196,29 @@ function UsersPage() {
           Use the checkboxes to assign or remove roles. Click <span className="font-bold">+ New Staff</span> to create accounts — signup is disabled on the login page.
         </p>
       </div>
+
+      {resetFor && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center p-4" onClick={() => setResetFor(null)}>
+          <form onSubmit={handleReset} onClick={e => e.stopPropagation()} className="bg-card border border-border w-full max-w-sm p-5 space-y-4 sticky top-16">
+            <h3 className="font-display font-extrabold tracking-tight">Reset Password</h3>
+            <p className="text-xs text-muted-foreground">Set a new password for <span className="font-bold">{resetFor.name}</span>. Share it with them directly.</p>
+            <div>
+              <label className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">New Password</label>
+              <input
+                type="text" required minLength={6} value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                className="mt-1 w-full bg-secondary border border-border px-3 py-2 text-sm focus:ring-2 focus:ring-primary outline-none"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button type="submit" disabled={busy} className="bg-primary text-primary-foreground font-display font-extrabold text-xs uppercase tracking-widest px-4 py-2 hover:bg-primary/90 disabled:opacity-60">
+                {busy ? "Saving…" : "Set Password"}
+              </button>
+              <button type="button" onClick={() => setResetFor(null)} className="text-xs font-mono uppercase tracking-widest px-4 py-2 hover:bg-muted">Cancel</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
