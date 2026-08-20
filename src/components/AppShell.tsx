@@ -1,5 +1,5 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, ShoppingCart, Package, Users, Truck, Receipt, UserCog, LogOut, TrendingUp, Wallet } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Truck, Receipt, UserCog, LogOut, TrendingUp, Wallet, FileBarChart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Toaster } from "sonner";
 
@@ -11,6 +11,7 @@ const NAV: NavItem[] = [
   { to: "/sales", label: "Sales", icon: Receipt },
   { to: "/profit", label: "Profit Report", icon: TrendingUp, adminOnly: true },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/customer-report", label: "Customer Report", icon: FileBarChart },
   { to: "/debts", label: "Debts & Payments", icon: Wallet },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/users", label: "Staff", icon: UserCog, adminOnly: true },
