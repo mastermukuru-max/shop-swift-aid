@@ -1,5 +1,5 @@
 import { Link, useRouter, useLocation } from "@tanstack/react-router";
-import { LayoutDashboard, ShoppingCart, Package, Users, Truck, Receipt, UserCog, LogOut, TrendingUp, Wallet } from "lucide-react";
+import { LayoutDashboard, ShoppingCart, Package, Users, Truck, Receipt, UserCog, LogOut, TrendingUp, Wallet, FileBarChart } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { Toaster } from "sonner";
 
