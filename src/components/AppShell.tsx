@@ -11,6 +11,7 @@ const NAV: NavItem[] = [
   { to: "/sales", label: "Sales", icon: Receipt },
   { to: "/profit", label: "Profit Report", icon: TrendingUp, adminOnly: true },
   { to: "/customers", label: "Customers", icon: Users },
+  { to: "/customer-report", label: "Customer Report", icon: FileBarChart },
   { to: "/debts", label: "Debts & Payments", icon: Wallet },
   { to: "/suppliers", label: "Suppliers", icon: Truck },
   { to: "/users", label: "Staff", icon: UserCog, adminOnly: true },
