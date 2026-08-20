@@ -5,7 +5,7 @@ import { useAuth, type AppRole } from "@/hooks/useAuth";
 import { PageHeader } from "@/components/AppShell";
 import { fmtDate } from "@/lib/format";
 import { toast } from "sonner";
-import { createStaffUser } from "@/lib/users.functions";
+import { createStaffUser, resetStaffPassword } from "@/lib/users.functions";
 import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/_app/users")({
