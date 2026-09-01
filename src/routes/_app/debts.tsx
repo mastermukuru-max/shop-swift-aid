@@ -29,6 +29,11 @@ function DebtsReportPage() {
   const load = async () => {
     const { data: cs } = await supabase.from("customers").select("*").order("balance", { ascending: false });
     setCustomers((cs as any) ?? []);
+    const { data: ss } = await supabase
+      .from("sales")
+      .select("id, sale_number, customer_id, total, amount_paid, payment_method, created_at")
+      .order("created_at", { ascending: false });
+    setSales((ss as any) ?? []);
     let q = supabase.from("customer_payments").select("*").order("created_at", { ascending: false });
     if (from) q = q.gte("created_at", new Date(from).toISOString());
     if (to) q = q.lte("created_at", new Date(to + "T23:59:59").toISOString());
