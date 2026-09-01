@@ -121,10 +121,11 @@ function DebtsReportPage() {
                   <th className="px-4 py-3 text-left">Type</th>
                   <th className="px-4 py-3 text-right">Outstanding</th>
                   <th className="px-4 py-3 text-right">Credit Limit</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {debtors.length === 0 && <tr><td colSpan={5} className="text-center py-12 text-xs text-muted-foreground">No outstanding debts.</td></tr>}
+                {debtors.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-xs text-muted-foreground">No outstanding debts.</td></tr>}
                 {debtors.map(c => (
                   <tr key={c.id} className="hover:bg-muted/50">
                     <td className="px-4 py-3 font-semibold">{c.name}</td>
@@ -132,13 +133,25 @@ function DebtsReportPage() {
                     <td className="px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{c.type}</td>
                     <td className="px-4 py-3 text-right font-mono text-destructive font-bold">{fmtKES(c.balance)}</td>
                     <td className="px-4 py-3 text-right font-mono">{fmtKES(c.credit_limit)}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        onClick={() => printCustomerStatement({
+                          customer: c,
+                          sales: sales.filter(s => s.customer_id === c.id),
+                          payments: payments.filter(p => p.customer_id === c.id),
+                        })}
+                        className="text-[10px] font-display font-extrabold tracking-widest px-3 py-1.5 border border-border hover:bg-muted inline-flex items-center gap-1"
+                      >
+                        <FileText className="size-3" /> PDF
+                      </button>
+                    </td>
                   </tr>
                 ))}
                 {debtors.length > 0 && (
                   <tr className="bg-muted/30 font-bold">
                     <td colSpan={3} className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest">Total</td>
                     <td className="px-4 py-3 text-right font-mono text-destructive">{fmtKES(totalDebt)}</td>
-                    <td></td>
+                    <td colSpan={2}></td>
                   </tr>
                 )}
               </tbody>
