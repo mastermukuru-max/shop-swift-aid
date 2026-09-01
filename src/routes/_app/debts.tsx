@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_app/debts")({
 });
 
 type Customer = { id: string; name: string; phone: string | null; balance: number; credit_limit: number; type: string };
+type Sale = { id: string; sale_number: string; customer_id: string | null; total: number; amount_paid: number; payment_method: string; created_at: string };
 type Payment = {
   id: string; customer_id: string; amount: number; method: string;
   reference: string | null; notes: string | null; created_at: string; created_by: string | null;
