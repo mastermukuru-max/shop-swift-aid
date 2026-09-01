@@ -20,6 +20,7 @@ type Payment = {
 
 function DebtsReportPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [payments, setPayments] = useState<Payment[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
