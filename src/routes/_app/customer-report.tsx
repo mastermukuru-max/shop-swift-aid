@@ -2,8 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES, fmtDateTime } from "@/lib/format";
+import { printCustomerStatement } from "@/lib/statement";
 import { PageHeader } from "@/components/AppShell";
-import { Download, X } from "lucide-react";
+import { Download, X, FileText } from "lucide-react";
 
 export const Route = createFileRoute("/_app/customer-report")({
   component: CustomerReportPage,
