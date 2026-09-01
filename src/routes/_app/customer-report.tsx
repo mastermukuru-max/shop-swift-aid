@@ -138,9 +138,15 @@ function CustomerReportPage() {
                   <td className="px-4 py-3 text-right font-mono text-primary">{fmtKES(r.settled)}</td>
                   <td className={`px-4 py-3 text-right font-mono font-bold ${Number(r.c.balance) > 0 ? "text-destructive" : ""}`}>{fmtKES(r.c.balance)}</td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{r.last ? fmtDateTime(r.last) : "—"}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right whitespace-nowrap">
                     <button onClick={() => setOpenId(r.c.id)} className="text-[10px] font-display font-extrabold tracking-widest px-3 py-1.5 border border-border hover:bg-muted">
                       HISTORY
+                    </button>
+                    <button
+                      onClick={() => printCustomerStatement({ customer: r.c, sales: r.sales, payments: r.pays })}
+                      className="ml-2 text-[10px] font-display font-extrabold tracking-widest px-3 py-1.5 border border-border hover:bg-muted inline-flex items-center gap-1"
+                    >
+                      <FileText className="size-3" /> PDF
                     </button>
                   </td>
                 </tr>
