@@ -49,9 +49,30 @@ function DebtsReportPage() {
   const totalDebt = debtors.reduce((s, c) => s + Number(c.balance), 0);
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
 
+  const ledgerCustomer = ledgerId ? cMap[ledgerId] : (debtors[0] ?? customers[0]);
+  const ledger = useMemo(
+    () => ledgerCustomer
+      ? buildLedger(
+          sales.filter(s => s.customer_id === ledgerCustomer.id),
+          payments.filter(p => p.customer_id === ledgerCustomer.id),
+        )
+      : [],
+    [ledgerCustomer, sales, payments],
+  );
+  const lt = ledgerTotals(ledger);
+
   const exportCSV = () => {
     const rows: string[][] = [];
-    if (tab === "debts") {
+    if (tab === "ledger") {
+      rows.push([`Debt ledger — ${ledgerCustomer?.name ?? ""}`]);
+      rows.push(["Date", "Entry", "Reference", "Debt Added (KES)", "Paid (KES)", "Running Balance (KES)"]);
+      ledger.forEach(e => rows.push([
+        new Date(e.date).toLocaleString(), e.detail, e.ref,
+        e.debit ? String(e.debit) : "", e.credit ? String(e.credit) : "", String(e.balance),
+      ]));
+      rows.push([]);
+      rows.push(["TOTALS", "", "", String(lt.charged), String(lt.paid), String(lt.balance)]);
+    } else if (tab === "debts") {
       rows.push(["Customer", "Phone", "Type", "Outstanding (KES)", "Credit Limit (KES)"]);
       debtors.forEach(c => rows.push([c.name, c.phone ?? "", c.type, String(c.balance), String(c.credit_limit)]));
       rows.push([]); rows.push(["TOTAL OUTSTANDING", "", "", String(totalDebt), ""]);
