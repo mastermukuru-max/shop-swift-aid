@@ -1,4 +1,5 @@
 import { fmtKES, fmtDateTime } from "./format";
+import { buildLedger, ledgerTotals } from "./ledger";
 
 export type StatementSale = {
   sale_number: string;
@@ -35,6 +36,19 @@ export function printCustomerStatement(d: StatementData) {
   const paidAtSale = d.sales.reduce((s, x) => s + num(x.amount_paid), 0);
   const collected = d.payments.reduce((s, x) => s + num(x.amount), 0);
   const balance = num(d.customer.balance);
+
+  const ledger = buildLedger(d.sales, d.payments);
+  const lt = ledgerTotals(ledger);
+  const ledgerRows = ledger.length
+    ? ledger.map(e => `<tr>
+        <td>${esc(fmtDateTime(e.date))}</td>
+        <td>${esc(e.detail)}</td>
+        <td>${esc(e.ref)}</td>
+        <td class="r">${e.debit ? esc(fmtKES(e.debit)) : "—"}</td>
+        <td class="r">${e.credit ? esc(fmtKES(e.credit)) : "—"}</td>
+        <td class="r"><strong>${esc(fmtKES(e.balance))}</strong></td>
+      </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">No debt activity recorded.</td></tr>`;
 
   const salesRows = d.sales.length
     ? d.sales.map(s => `<tr>
@@ -108,6 +122,13 @@ export function printCustomerStatement(d: StatementData) {
       <td>Debt Payments Received</td><td class="r">${esc(fmtKES(collected))}</td>
       <td>Outstanding Balance</td><td class="r">${esc(fmtKES(balance))}</td>
     </tr>
+  </table>
+
+  <h2>Debt Ledger — Running Balance (${ledger.length})</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Entry</th><th>Ref</th><th class="r">Debt Added</th><th class="r">Paid</th><th class="r">Balance</th></tr></thead>
+    <tbody>${ledgerRows}</tbody>
+    <tfoot><tr><td colspan="3">Totals</td><td class="r">${esc(fmtKES(lt.charged))}</td><td class="r">${esc(fmtKES(lt.paid))}</td><td class="r">${esc(fmtKES(lt.balance))}</td></tr></tfoot>
   </table>
 
   <h2>Purchase History (${d.sales.length})</h2>

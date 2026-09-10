@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { printCustomerStatement } from "@/lib/statement";
+import { buildLedger, ledgerTotals } from "@/lib/ledger";
 import { PageHeader } from "@/components/AppShell";
 import { Download, Wallet, FileText } from "lucide-react";
 
@@ -24,7 +25,8 @@ function DebtsReportPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [tab, setTab] = useState<"debts" | "payments">("debts");
+  const [tab, setTab] = useState<"debts" | "payments" | "ledger">("debts");
+  const [ledgerId, setLedgerId] = useState<string>("");
 
   const load = async () => {
     const { data: cs } = await supabase.from("customers").select("*").order("balance", { ascending: false });
@@ -47,9 +49,30 @@ function DebtsReportPage() {
   const totalDebt = debtors.reduce((s, c) => s + Number(c.balance), 0);
   const totalCollected = payments.reduce((s, p) => s + Number(p.amount), 0);
 
+  const ledgerCustomer = ledgerId ? cMap[ledgerId] : (debtors[0] ?? customers[0]);
+  const ledger = useMemo(
+    () => ledgerCustomer
+      ? buildLedger(
+          sales.filter(s => s.customer_id === ledgerCustomer.id),
+          payments.filter(p => p.customer_id === ledgerCustomer.id),
+        )
+      : [],
+    [ledgerCustomer, sales, payments],
+  );
+  const lt = ledgerTotals(ledger);
+
   const exportCSV = () => {
     const rows: string[][] = [];
-    if (tab === "debts") {
+    if (tab === "ledger") {
+      rows.push([`Debt ledger — ${ledgerCustomer?.name ?? ""}`]);
+      rows.push(["Date", "Entry", "Reference", "Debt Added (KES)", "Paid (KES)", "Running Balance (KES)"]);
+      ledger.forEach(e => rows.push([
+        new Date(e.date).toLocaleString(), e.detail, e.ref,
+        e.debit ? String(e.debit) : "", e.credit ? String(e.credit) : "", String(e.balance),
+      ]));
+      rows.push([]);
+      rows.push(["TOTALS", "", "", String(lt.charged), String(lt.paid), String(lt.balance)]);
+    } else if (tab === "debts") {
       rows.push(["Customer", "Phone", "Type", "Outstanding (KES)", "Credit Limit (KES)"]);
       debtors.forEach(c => rows.push([c.name, c.phone ?? "", c.type, String(c.balance), String(c.credit_limit)]));
       rows.push([]); rows.push(["TOTAL OUTSTANDING", "", "", String(totalDebt), ""]);
@@ -70,7 +93,8 @@ function DebtsReportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${tab === "debts" ? "outstanding-debts" : "payments"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const base = tab === "debts" ? "outstanding-debts" : tab === "payments" ? "payments" : `ledger-${(ledgerCustomer?.name ?? "customer").replace(/\s+/g, "-").toLowerCase()}`;
+    a.download = `${base}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -108,6 +132,7 @@ function DebtsReportPage() {
           <div className="ml-auto flex border border-border">
             <button onClick={() => setTab("debts")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "debts" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>OUTSTANDING DEBTS</button>
             <button onClick={() => setTab("payments")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "payments" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>PAYMENT HISTORY</button>
+            <button onClick={() => setTab("ledger")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "ledger" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>DEBT LEDGER</button>
           </div>
         </div>
 
@@ -156,7 +181,7 @@ function DebtsReportPage() {
                 )}
               </tbody>
             </table>
-          ) : (
+          ) : tab === "payments" ? (
             <table className="w-full text-sm">
               <thead className="bg-muted text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <tr>
@@ -191,6 +216,66 @@ function DebtsReportPage() {
                 )}
               </tbody>
             </table>
+          ) : (
+            <div>
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-border bg-muted/30">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Customer</span>
+                <select
+                  value={ledgerCustomer?.id ?? ""}
+                  onChange={e => setLedgerId(e.target.value)}
+                  className="bg-secondary border border-border px-3 py-2 text-sm outline-none"
+                >
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}{Number(c.balance) > 0 ? ` — ${fmtKES(c.balance)}` : ""}</option>
+                  ))}
+                </select>
+                {ledgerCustomer && (
+                  <button
+                    onClick={() => printCustomerStatement({
+                      customer: ledgerCustomer,
+                      sales: sales.filter(s => s.customer_id === ledgerCustomer.id),
+                      payments: payments.filter(p => p.customer_id === ledgerCustomer.id),
+                    })}
+                    className="ml-auto text-[10px] font-display font-extrabold tracking-widest px-3 py-2 border border-border hover:bg-muted inline-flex items-center gap-1"
+                  >
+                    <FileText className="size-3" /> STATEMENT PDF
+                  </button>
+                )}
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">Entry</th>
+                    <th className="px-4 py-3 text-left">Reference</th>
+                    <th className="px-4 py-3 text-right">Debt Added</th>
+                    <th className="px-4 py-3 text-right">Paid</th>
+                    <th className="px-4 py-3 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {ledger.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-xs text-muted-foreground">No debt activity for this customer.</td></tr>}
+                  {ledger.map((e, i) => (
+                    <tr key={i} className="hover:bg-muted/50">
+                      <td className="px-4 py-3 font-mono text-xs">{new Date(e.date).toLocaleString()}</td>
+                      <td className="px-4 py-3">{e.detail}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{e.ref}</td>
+                      <td className="px-4 py-3 text-right font-mono text-destructive">{e.debit ? fmtKES(e.debit) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-primary">{e.credit ? fmtKES(e.credit) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold">{fmtKES(e.balance)}</td>
+                    </tr>
+                  ))}
+                  {ledger.length > 0 && (
+                    <tr className="bg-muted/30 font-bold">
+                      <td colSpan={3} className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest">Summary</td>
+                      <td className="px-4 py-3 text-right font-mono text-destructive">{fmtKES(lt.charged)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-primary">{fmtKES(lt.paid)}</td>
+                      <td className="px-4 py-3 text-right font-mono">{fmtKES(lt.balance)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
