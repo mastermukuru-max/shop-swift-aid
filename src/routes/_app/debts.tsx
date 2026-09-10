@@ -216,6 +216,66 @@ function DebtsReportPage() {
                 )}
               </tbody>
             </table>
+          ) : (
+            <div>
+              <div className="flex flex-wrap items-center gap-3 px-4 py-3 border-b border-border bg-muted/30">
+                <span className="text-[10px] font-mono uppercase tracking-widest text-muted-foreground">Customer</span>
+                <select
+                  value={ledgerCustomer?.id ?? ""}
+                  onChange={e => setLedgerId(e.target.value)}
+                  className="bg-secondary border border-border px-3 py-2 text-sm outline-none"
+                >
+                  {customers.map(c => (
+                    <option key={c.id} value={c.id}>{c.name}{Number(c.balance) > 0 ? ` — ${fmtKES(c.balance)}` : ""}</option>
+                  ))}
+                </select>
+                {ledgerCustomer && (
+                  <button
+                    onClick={() => printCustomerStatement({
+                      customer: ledgerCustomer,
+                      sales: sales.filter(s => s.customer_id === ledgerCustomer.id),
+                      payments: payments.filter(p => p.customer_id === ledgerCustomer.id),
+                    })}
+                    className="ml-auto text-[10px] font-display font-extrabold tracking-widest px-3 py-2 border border-border hover:bg-muted inline-flex items-center gap-1"
+                  >
+                    <FileText className="size-3" /> STATEMENT PDF
+                  </button>
+                )}
+              </div>
+              <table className="w-full text-sm">
+                <thead className="bg-muted text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 text-left">Date</th>
+                    <th className="px-4 py-3 text-left">Entry</th>
+                    <th className="px-4 py-3 text-left">Reference</th>
+                    <th className="px-4 py-3 text-right">Debt Added</th>
+                    <th className="px-4 py-3 text-right">Paid</th>
+                    <th className="px-4 py-3 text-right">Balance</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {ledger.length === 0 && <tr><td colSpan={6} className="text-center py-12 text-xs text-muted-foreground">No debt activity for this customer.</td></tr>}
+                  {ledger.map((e, i) => (
+                    <tr key={i} className="hover:bg-muted/50">
+                      <td className="px-4 py-3 font-mono text-xs">{new Date(e.date).toLocaleString()}</td>
+                      <td className="px-4 py-3">{e.detail}</td>
+                      <td className="px-4 py-3 font-mono text-xs">{e.ref}</td>
+                      <td className="px-4 py-3 text-right font-mono text-destructive">{e.debit ? fmtKES(e.debit) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono text-primary">{e.credit ? fmtKES(e.credit) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-mono font-bold">{fmtKES(e.balance)}</td>
+                    </tr>
+                  ))}
+                  {ledger.length > 0 && (
+                    <tr className="bg-muted/30 font-bold">
+                      <td colSpan={3} className="px-4 py-3 text-[10px] font-mono uppercase tracking-widest">Summary</td>
+                      <td className="px-4 py-3 text-right font-mono text-destructive">{fmtKES(lt.charged)}</td>
+                      <td className="px-4 py-3 text-right font-mono text-primary">{fmtKES(lt.paid)}</td>
+                      <td className="px-4 py-3 text-right font-mono">{fmtKES(lt.balance)}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
