@@ -37,6 +37,19 @@ export function printCustomerStatement(d: StatementData) {
   const collected = d.payments.reduce((s, x) => s + num(x.amount), 0);
   const balance = num(d.customer.balance);
 
+  const ledger = buildLedger(d.sales, d.payments);
+  const lt = ledgerTotals(ledger);
+  const ledgerRows = ledger.length
+    ? ledger.map(e => `<tr>
+        <td>${esc(fmtDateTime(e.date))}</td>
+        <td>${esc(e.detail)}</td>
+        <td>${esc(e.ref)}</td>
+        <td class="r">${e.debit ? esc(fmtKES(e.debit)) : "—"}</td>
+        <td class="r">${e.credit ? esc(fmtKES(e.credit)) : "—"}</td>
+        <td class="r"><strong>${esc(fmtKES(e.balance))}</strong></td>
+      </tr>`).join("")
+    : `<tr><td colspan="6" class="empty">No debt activity recorded.</td></tr>`;
+
   const salesRows = d.sales.length
     ? d.sales.map(s => `<tr>
         <td>${esc(fmtDateTime(s.created_at))}</td>
