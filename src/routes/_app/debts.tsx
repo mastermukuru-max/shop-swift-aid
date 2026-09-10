@@ -132,6 +132,7 @@ function DebtsReportPage() {
           <div className="ml-auto flex border border-border">
             <button onClick={() => setTab("debts")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "debts" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>OUTSTANDING DEBTS</button>
             <button onClick={() => setTab("payments")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "payments" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>PAYMENT HISTORY</button>
+            <button onClick={() => setTab("ledger")} className={`px-4 py-2 text-[10px] font-display font-extrabold tracking-widest ${tab === "ledger" ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`}>DEBT LEDGER</button>
           </div>
         </div>
 
