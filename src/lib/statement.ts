@@ -1,4 +1,5 @@
 import { fmtKES, fmtDateTime } from "./format";
+import { buildLedger, ledgerTotals } from "./ledger";
 
 export type StatementSale = {
   sale_number: string;
