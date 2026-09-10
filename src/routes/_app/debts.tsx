@@ -181,7 +181,7 @@ function DebtsReportPage() {
                 )}
               </tbody>
             </table>
-          ) : (
+          ) : tab === "payments" ? (
             <table className="w-full text-sm">
               <thead className="bg-muted text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
                 <tr>
