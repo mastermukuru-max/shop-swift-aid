@@ -93,7 +93,8 @@ function DebtsReportPage() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${tab === "debts" ? "outstanding-debts" : "payments"}-${new Date().toISOString().slice(0, 10)}.csv`;
+    const base = tab === "debts" ? "outstanding-debts" : tab === "payments" ? "payments" : `ledger-${(ledgerCustomer?.name ?? "customer").replace(/\s+/g, "-").toLowerCase()}`;
+    a.download = `${base}-${new Date().toISOString().slice(0, 10)}.csv`;
     a.click();
     URL.revokeObjectURL(url);
   };
