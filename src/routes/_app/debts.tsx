@@ -25,7 +25,8 @@ function DebtsReportPage() {
   const [payments, setPayments] = useState<Payment[]>([]);
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
-  const [tab, setTab] = useState<"debts" | "payments">("debts");
+  const [tab, setTab] = useState<"debts" | "payments" | "ledger">("debts");
+  const [ledgerId, setLedgerId] = useState<string>("");
 
   const load = async () => {
     const { data: cs } = await supabase.from("customers").select("*").order("balance", { ascending: false });
