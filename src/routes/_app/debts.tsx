@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { fmtKES } from "@/lib/format";
 import { printCustomerStatement } from "@/lib/statement";
+import { buildLedger, ledgerTotals } from "@/lib/ledger";
 import { PageHeader } from "@/components/AppShell";
 import { Download, Wallet, FileText } from "lucide-react";
 
